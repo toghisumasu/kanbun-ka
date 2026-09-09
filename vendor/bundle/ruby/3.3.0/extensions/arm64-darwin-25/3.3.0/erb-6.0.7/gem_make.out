@@ -1,0 +1,31 @@
+current directory: /Volumes/externalHDD/projects/kanbun-ka/vendor/bundle/ruby/3.3.0/gems/erb-6.0.7/ext/erb/escape
+/Users/unpodisaleicloud.com/.rbenv/versions/3.3.6/bin/ruby extconf.rb
+checking for rb_ext_ractor_safe() in ruby.h... yes
+creating Makefile
+
+current directory: /Volumes/externalHDD/projects/kanbun-ka/vendor/bundle/ruby/3.3.0/gems/erb-6.0.7/ext/erb/escape
+make -j11 DESTDIR\= sitearchdir\=./.gem.20260901-20969-71v069 sitelibdir\=./.gem.20260901-20969-71v069 clean
+
+current directory: /Volumes/externalHDD/projects/kanbun-ka/vendor/bundle/ruby/3.3.0/gems/erb-6.0.7/ext/erb/escape
+make -j11 DESTDIR\= sitearchdir\=./.gem.20260901-20969-71v069 sitelibdir\=./.gem.20260901-20969-71v069
+compiling escape.c
+In file included from escape.c:1:
+In file included from /Users/unpodisaleicloud.com/.rbenv/versions/3.3.6/include/ruby-3.3.0/ruby.h:38:
+In file included from /Users/unpodisaleicloud.com/.rbenv/versions/3.3.6/include/ruby-3.3.0/ruby/ruby.h:28:
+In file included from /Users/unpodisaleicloud.com/.rbenv/versions/3.3.6/include/ruby-3.3.0/ruby/internal/arithmetic.h:24:
+In file included from /Users/unpodisaleicloud.com/.rbenv/versions/3.3.6/include/ruby-3.3.0/ruby/internal/arithmetic/char.h:29:
+/Users/unpodisaleicloud.com/.rbenv/versions/3.3.6/include/ruby-3.3.0/ruby/internal/core/rstring.h:398:24: warning: default initialization of an object of type 'struct RString' with const member leaves the object uninitialized [-Wdefault-const-init-field-unsafe]
+  398 |         struct RString retval;
+      |                        ^
+/Users/unpodisaleicloud.com/.rbenv/versions/3.3.6/include/ruby-3.3.0/ruby/internal/core/rbasic.h:88:17: note: member 'klass' declared 'const' here
+   88 |     const VALUE klass;
+      |                 ^
+1 warning generated.
+linking shared-object erb/escape.bundle
+
+current directory: /Volumes/externalHDD/projects/kanbun-ka/vendor/bundle/ruby/3.3.0/gems/erb-6.0.7/ext/erb/escape
+make -j11 DESTDIR\= sitearchdir\=./.gem.20260901-20969-71v069 sitelibdir\=./.gem.20260901-20969-71v069 install
+/usr/bin/install -c -m 0755 escape.bundle ./.gem.20260901-20969-71v069/erb
+
+current directory: /Volumes/externalHDD/projects/kanbun-ka/vendor/bundle/ruby/3.3.0/gems/erb-6.0.7/ext/erb/escape
+make DESTDIR\= sitearchdir\=./.gem.20260901-20969-71v069 sitelibdir\=./.gem.20260901-20969-71v069 clean

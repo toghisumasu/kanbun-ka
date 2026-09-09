@@ -1,0 +1,79 @@
+current directory: /Volumes/externalHDD/projects/kanbun-ka/vendor/bundle/ruby/3.3.0/gems/puma-8.0.2/ext/puma_http11
+/Users/unpodisaleicloud.com/.rbenv/versions/3.3.6/bin/ruby extconf.rb
+checking for BIO_read() in -llibcrypto... no
+checking for BIO_read() in -lcrypto... yes
+checking for SSL_CTX_new() in -lssl... yes
+checking for openssl/bio.h... yes
+
+──── Below are yes for 1.0.2 & later ────
+checking for DTLS_method() in openssl/ssl.h... yes
+checking for SSL_CTX_set_session_cache_mode(NULL, 0) in openssl/ssl.h... yes
+
+──── Below are yes for 1.1.0 & later ────
+checking for TLS_server_method() in openssl/ssl.h... yes
+checking for SSL_CTX_set_min_proto_version(NULL, 0) in openssl/ssl.h... yes
+
+──── Below is yes for 1.1.0 and later, but isn't documented until 3.0.0 ────
+checking for SSL_CTX_set_dh_auto(NULL, 0) in openssl/ssl.h... yes
+
+──── Below is yes for 1.1.1 & later ────
+checking for SSL_CTX_set_ciphersuites(NULL, "") in openssl/ssl.h... yes
+
+──── Below is yes for 3.0.0 & later ────
+checking for SSL_get1_peer_certificate() in openssl/ssl.h... yes
+
+creating Makefile
+
+current directory: /Volumes/externalHDD/projects/kanbun-ka/vendor/bundle/ruby/3.3.0/gems/puma-8.0.2/ext/puma_http11
+make -j11 DESTDIR\= sitearchdir\=./.gem.20260901-20969-3klzyq sitelibdir\=./.gem.20260901-20969-3klzyq clean
+
+current directory: /Volumes/externalHDD/projects/kanbun-ka/vendor/bundle/ruby/3.3.0/gems/puma-8.0.2/ext/puma_http11
+make -j11 DESTDIR\= sitearchdir\=./.gem.20260901-20969-3klzyq sitelibdir\=./.gem.20260901-20969-3klzyq
+compiling http11_parser.c
+compiling mini_ssl.c
+compiling puma_http11.c
+In file included from puma_http11.c:9:
+In file included from /Users/unpodisaleicloud.com/.rbenv/versions/3.3.6/include/ruby-3.3.0/ruby.h:38:
+In file included from /Users/unpodisaleicloud.com/.rbenv/versions/3.3.6/include/ruby-3.3.0/ruby/ruby.h:28:
+In file included from /Users/unpodisaleicloud.com/.rbenv/versions/3.3.6/include/ruby-3.3.0/ruby/internal/arithmetic.h:24:
+In file included from /Users/unpodisaleicloud.com/.rbenv/versions/3.3.6/include/ruby-3.3.0/ruby/internal/arithmetic/char.h:29:
+/Users/unpodisaleicloud.com/.rbenv/versions/3.3.6/include/ruby-3.3.0/ruby/internal/core/rstring.h:398:24: warning: default initialization of an object of type 'struct RString' with const member leaves the object uninitialized [-Wdefault-const-init-field-unsafe]
+  398 |         struct RString retval;
+      |                        ^
+In file included from mini_ssl.c:3:
+In file included from /Users/unpodisaleicloud.com/.rbenv/versions/3.3.6/include/ruby-3.3.0/ruby.h/Users/unpodisaleicloud.com/.rbenv/versions/3.3.6/include/ruby-3.3.0/ruby/internal/core/rbasic.h::3888:
+:In file included from 17/Users/unpodisaleicloud.com/.rbenv/versions/3.3.6/include/ruby-3.3.0/ruby/ruby.h:: 28note: :
+member 'klass' declared 'const' hereIn file included from 
+/Users/unpodisaleicloud.com/.rbenv/versions/3.3.6/include/ruby-3.3.0/ruby/internal/arithmetic.h:24   :
+88In file included from  | /Users/unpodisaleicloud.com/.rbenv/versions/3.3.6/include/ruby-3.3.0/ruby/internal/arithmetic/char.h:29:
+/Users/unpodisaleicloud.com/.rbenv/versions/3.3.6/include/ruby-3.3.0/ruby/internal/core/rstring.h:398:24 :   warning:  default initialization of an object of type 'struct RString' with const member leaves the object uninitialized [-Wdefault-const-init-field-unsafe]c
+onst VALUE   398k | l a s s     s;t
+r      u| c                ^t
+ RString retvaIn file included from ext/puma_http11/http11_parser.rl:6:
+In file included from ./http11_parser.hl:;11
+:
+      In file included from | /Users/unpodisaleicloud.com/.rbenv/versions/3.3.6/include/ruby-3.3.0/ruby.h                       ^
+:38:
+In file included from /Users/unpodisaleicloud.com/.rbenv/versions/3.3.6/include/ruby-3.3.0/ruby/ruby.h:28/Users/unpodisaleicloud.com/.rbenv/versions/3.3.6/include/ruby-3.3.0/ruby/internal/core/rbasic.h:
+:In file included from 88/Users/unpodisaleicloud.com/.rbenv/versions/3.3.6/include/ruby-3.3.0/ruby/internal/arithmetic.h::24:
+In file included from /Users/unpodisaleicloud.com/.rbenv/versions/3.3.6/include/ruby-3.3.0/ruby/internal/arithmetic/char.h:29:
+17: note: /Users/unpodisaleicloud.com/.rbenv/versions/3.3.6/include/ruby-3.3.0/ruby/internal/core/rstring.hmember 'klass' declared 'const' here:
+398:24:   88 |      warning: cdefault initialization of an object of type 'struct RString' with const member leaves the object uninitialized [-Wdefault-const-init-field-unsafe]o
+nst VALUE   398k | l a s s ;
+      |                 ^
+    struct RString retval;
+      |                        ^
+/Users/unpodisaleicloud.com/.rbenv/versions/3.3.6/include/ruby-3.3.0/ruby/internal/core/rbasic.h:88:17: note: member 'klass' declared 'const' here
+   88 |     const VALUE klass;
+      |                 ^
+1 warning generated.
+1 warning generated.
+1 warning generated.
+linking shared-object puma/puma_http11.bundle
+
+current directory: /Volumes/externalHDD/projects/kanbun-ka/vendor/bundle/ruby/3.3.0/gems/puma-8.0.2/ext/puma_http11
+make -j11 DESTDIR\= sitearchdir\=./.gem.20260901-20969-3klzyq sitelibdir\=./.gem.20260901-20969-3klzyq install
+/usr/bin/install -c -m 0755 puma_http11.bundle ./.gem.20260901-20969-3klzyq/puma
+
+current directory: /Volumes/externalHDD/projects/kanbun-ka/vendor/bundle/ruby/3.3.0/gems/puma-8.0.2/ext/puma_http11
+make DESTDIR\= sitearchdir\=./.gem.20260901-20969-3klzyq sitelibdir\=./.gem.20260901-20969-3klzyq clean
