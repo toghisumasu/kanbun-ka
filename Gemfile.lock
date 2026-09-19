@@ -388,6 +388,7 @@ DEPENDENCIES
   kamal
   propshaft
   puma (>= 5.0)
+  racc
   rails (~> 8.1.3)
   rubocop-rails-omakase
   solid_cable

@@ -59,3 +59,4 @@ group :development do
   gem "web-console"
 end
 gem "dotenv-rails", groups: [:development, :test]
+gem "racc"
