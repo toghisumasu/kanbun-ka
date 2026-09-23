@@ -10,33 +10,10 @@ require 'strscan'
 
 class KanbunParser < Racc::Parser
 
-module_eval(<<'...end kanbun_parser.y/module_eval...', 'kanbun_parser.y', 58)
+module_eval(<<'...end kanbun_parser.y/module_eval...', 'kanbun_parser.y', 63)
 
-# ============================================================
-# 語彙辞書
-# PDFの句法一覧 no.1〜9 の例文に登場する字を収録
-# （フェーズ1対象範囲：否定・禁止の基本句法）
-# ============================================================
-
-VERBS = %w[
-  学 読 書 見 聞 知 行 来 食 飲 思 言 得 去 入 出 為
-  能 足 笑 施 敢
-]
-# 追加字の根拠（PDFの句法一覧より）:
-#   能 → no.2「弗能応也」
-#   足 → no.5「蛇固無足」
-#   笑 → no.7「君莫笑」
-#   施 → no.8「勿施於人」
-#   敢 → no.9「子無敢食我也」（助動詞扱い、VERB+VERBで「敢食」と連結）
-
-NOUNS = %w[
-  人 君 臣 子 民 文 道 国 師 天 地 王 士 物 事
-  願
-]
-# 追加字の根拠:
-#   願 → no.4「富貴非吾願」
-# ※吾（代名詞）は意図的に未収録:
-#   テストケース「非吾願」で 吾 をスキップ → 「非願」を返すのが期待動作
+VERBS = %w[学 読 書 見 聞 知 行 来 食 飲 思 言 得 去 入 出 為 陥 慎 争 賢 有 笑]
+NOUNS = %w[人 君 臣 子 民 文 道 国 師 天 地 王 士 物 事 土 寒 言]
 
 def parse(str)
   @tokens = tokenize(str)
@@ -51,7 +28,6 @@ end
 def tokenize(str)
   tokens = []
   scanner = StringScanner.new(str)
-  # 否定・禁止字の判定を VERBS/NOUNS より先に行う
   until scanner.eos?
     case
     when scanner.scan(/不/) then tokens << [:NEG_BU,        '不']
@@ -60,9 +36,12 @@ def tokenize(str)
     when scanner.scan(/無/) then tokens << [:NEG_MU,        '無']
     when scanner.scan(/莫/) then tokens << [:NEG_BAKU,      '莫']
     when scanner.scan(/勿/) then tokens << [:PROHIBIT_NAKA, '勿']
+    when scanner.scan(/必/) then tokens << [:HITSZU,        '必']
+    when scanner.scan(/常/) then tokens << [:JOU,           '常']
+    when scanner.scan(/復/) then tokens << [:MATA,          '復']
     when scanner.scan(Regexp.new("[#{VERBS.join}]")) then tokens << [:VERB, scanner.matched]
     when scanner.scan(Regexp.new("[#{NOUNS.join}]")) then tokens << [:NOUN, scanner.matched]
-    else scanner.getch  # 辞書未登録の字はスキップ
+    else scanner.getch
     end
   end
   tokens << [false, nil]
@@ -73,59 +52,76 @@ end
 ##### State transition tables begin ###
 
 racc_action_table = [
-     6,     7,     8,     9,    10,    11,    12,    13,    12,    13,
-    12,    13,    12,    13,    12,    13,    12,    13,    12,    13,
-    22,    21,    14,    23 ]
+    10,    11,     9,     8,    12,    13,    18,    16,    17,    14,
+    15,    20,    14,    15,    31,    14,    15,    14,    15,    32,
+    14,    15,    22,    23,    24,    14,    15,    14,    15,    30,
+    29,    14,    15,    14,    15,    14,    15,    14,    15,    14,
+    15,    14,    15 ]
 
 racc_action_check = [
-     0,     0,     0,     0,     0,     0,     0,     0,     6,     6,
-     7,     7,     8,     8,     9,     9,    10,    10,    11,    11,
-    12,    12,     1,    14 ]
+     0,     0,     0,     0,     0,     0,     8,     1,     8,     0,
+     0,     9,    11,    11,    15,     8,     8,    12,    12,    16,
+     9,     9,    10,    10,    10,    10,    10,    13,    13,    14,
+    14,    17,    17,    18,    18,    20,    20,    22,    22,    23,
+    23,    24,    24 ]
 
 racc_action_pointer = [
-    -2,    22,   nil,   nil,   nil,   nil,     0,     2,     4,     6,
-     8,    10,    12,   nil,    23,   nil,   nil,   nil,   nil,   nil,
-   nil,   nil,   nil,   nil ]
+    -2,     7,   nil,   nil,   nil,   nil,   nil,   nil,     4,     9,
+    14,     1,     6,    16,    18,     2,    19,    20,    22,   nil,
+    24,   nil,    26,    28,    30,   nil,   nil,   nil,   nil,   nil,
+   nil,   nil,   nil,   nil,   nil,   nil,   nil,   nil,   nil ]
 
 racc_action_default = [
-   -15,   -15,    -1,    -2,    -3,    -4,   -15,   -15,   -15,   -15,
-   -15,   -15,   -11,   -14,   -15,    -5,    -6,    -7,    -8,    -9,
-   -10,   -12,   -13,    24 ]
+   -24,   -24,    -1,    -2,    -3,    -4,    -5,    -6,   -24,   -24,
+   -24,   -24,   -24,   -24,   -19,   -22,   -24,   -24,   -24,   -16,
+   -24,   -15,   -24,   -24,   -24,   -13,   -14,   -17,   -18,   -20,
+   -21,   -23,    39,    -7,    -8,    -9,   -10,   -11,   -12 ]
 
 racc_goto_table = [
-     5,     1,     2,     3,     4,   nil,    15,    16,    17,    18,
-    19,    20 ]
+     7,     1,     2,     3,     4,     5,     6,   nil,    19,    21,
+    25,    26,    27,    28,   nil,   nil,   nil,    33,    34,   nil,
+    35,   nil,    36,    37,    38 ]
 
 racc_goto_check = [
-     5,     1,     2,     3,     4,   nil,     5,     5,     5,     5,
-     5,     5 ]
+     7,     1,     2,     3,     4,     5,     6,   nil,     7,     7,
+     7,     7,     7,     7,   nil,   nil,   nil,     7,     7,   nil,
+     7,   nil,     7,     7,     7 ]
 
 racc_goto_pointer = [
-   nil,     1,     2,     3,     4,     0 ]
+   nil,     1,     2,     3,     4,     5,     6,     0 ]
 
 racc_goto_default = [
-   nil,   nil,   nil,   nil,   nil,   nil ]
+   nil,   nil,   nil,   nil,   nil,   nil,   nil,   nil ]
 
 racc_reduce_table = [
   0, 0, :racc_error,
-  1, 11, :_reduce_1,
-  1, 12, :_reduce_2,
-  1, 12, :_reduce_3,
-  1, 12, :_reduce_4,
-  2, 13, :_reduce_5,
-  2, 13, :_reduce_6,
-  2, 13, :_reduce_7,
-  2, 13, :_reduce_8,
-  2, 13, :_reduce_9,
-  2, 14, :_reduce_10,
-  1, 15, :_reduce_11,
-  2, 15, :_reduce_12,
-  2, 15, :_reduce_13,
-  1, 15, :_reduce_14 ]
+  1, 14, :_reduce_1,
+  1, 15, :_reduce_2,
+  1, 15, :_reduce_3,
+  1, 15, :_reduce_4,
+  1, 15, :_reduce_5,
+  1, 15, :_reduce_6,
+  3, 16, :_reduce_7,
+  3, 16, :_reduce_8,
+  3, 16, :_reduce_9,
+  3, 17, :_reduce_10,
+  3, 17, :_reduce_11,
+  3, 17, :_reduce_12,
+  2, 18, :_reduce_13,
+  2, 18, :_reduce_14,
+  2, 18, :_reduce_15,
+  2, 18, :_reduce_16,
+  2, 18, :_reduce_17,
+  2, 19, :_reduce_18,
+  1, 20, :_reduce_19,
+  2, 20, :_reduce_20,
+  2, 20, :_reduce_21,
+  1, 20, :_reduce_22,
+  2, 20, :_reduce_23 ]
 
-racc_reduce_n = 15
+racc_reduce_n = 24
 
-racc_shift_n = 24
+racc_shift_n = 39
 
 racc_token_table = {
   false => 0,
@@ -136,10 +132,13 @@ racc_token_table = {
   :NEG_MU => 5,
   :NEG_BAKU => 6,
   :PROHIBIT_NAKA => 7,
-  :VERB => 8,
-  :NOUN => 9 }
+  :HITSZU => 8,
+  :JOU => 9,
+  :MATA => 10,
+  :VERB => 11,
+  :NOUN => 12 }
 
-racc_nt_base = 10
+racc_nt_base = 13
 
 racc_use_result_var = true
 
@@ -169,11 +168,16 @@ Racc_token_to_s_table = [
   "NEG_MU",
   "NEG_BAKU",
   "PROHIBIT_NAKA",
+  "HITSZU",
+  "JOU",
+  "MATA",
   "VERB",
   "NOUN",
   "$start",
   "sentence",
   "clause",
+  "double_neg_clause",
+  "partial_neg_clause",
   "neg_clause",
   "prohibit_clause",
   "verb_phrase" ]
@@ -185,100 +189,163 @@ Racc_debug_parser = false
 
 # reduce 0 omitted
 
-module_eval(<<'.,.,', 'kanbun_parser.y', 15)
+module_eval(<<'.,.,', 'kanbun_parser.y', 10)
   def _reduce_1(val, _values, result)
      result = val[0]
     result
   end
 .,.,
 
-module_eval(<<'.,.,', 'kanbun_parser.y', 18)
+module_eval(<<'.,.,', 'kanbun_parser.y', 13)
   def _reduce_2(val, _values, result)
      result = val[0]
     result
   end
 .,.,
 
-module_eval(<<'.,.,', 'kanbun_parser.y', 19)
+module_eval(<<'.,.,', 'kanbun_parser.y', 14)
   def _reduce_3(val, _values, result)
      result = val[0]
     result
   end
 .,.,
 
-module_eval(<<'.,.,', 'kanbun_parser.y', 20)
+module_eval(<<'.,.,', 'kanbun_parser.y', 15)
   def _reduce_4(val, _values, result)
      result = val[0]
     result
   end
 .,.,
 
-module_eval(<<'.,.,', 'kanbun_parser.y', 31)
+module_eval(<<'.,.,', 'kanbun_parser.y', 16)
   def _reduce_5(val, _values, result)
-     result = "不#{val[1]}"
+     result = val[0]
     result
   end
 .,.,
 
-module_eval(<<'.,.,', 'kanbun_parser.y', 32)
+module_eval(<<'.,.,', 'kanbun_parser.y', 17)
   def _reduce_6(val, _values, result)
-     result = "弗#{val[1]}"
+     result = val[0]
+    result
+  end
+.,.,
+
+module_eval(<<'.,.,', 'kanbun_parser.y', 24)
+  def _reduce_7(val, _values, result)
+     result = "無非#{val[2]}"
+    result
+  end
+.,.,
+
+module_eval(<<'.,.,', 'kanbun_parser.y', 25)
+  def _reduce_8(val, _values, result)
+     result = "無不#{val[2]}"
+    result
+  end
+.,.,
+
+module_eval(<<'.,.,', 'kanbun_parser.y', 26)
+  def _reduce_9(val, _values, result)
+     result = "非不#{val[2]}"
     result
   end
 .,.,
 
 module_eval(<<'.,.,', 'kanbun_parser.y', 33)
-  def _reduce_7(val, _values, result)
-     result = "非#{val[1]}"
+  def _reduce_10(val, _values, result)
+     result = "不必#{val[2]}"
     result
   end
 .,.,
 
 module_eval(<<'.,.,', 'kanbun_parser.y', 34)
-  def _reduce_8(val, _values, result)
-     result = "無#{val[1]}"
+  def _reduce_11(val, _values, result)
+     result = "不常#{val[2]}"
     result
   end
 .,.,
 
 module_eval(<<'.,.,', 'kanbun_parser.y', 35)
-  def _reduce_9(val, _values, result)
-     result = "莫#{val[1]}"
+  def _reduce_12(val, _values, result)
+     result = "不復#{val[2]}"
+    result
+  end
+.,.,
+
+module_eval(<<'.,.,', 'kanbun_parser.y', 39)
+  def _reduce_13(val, _values, result)
+     result = "不#{val[1]}"
+    result
+  end
+.,.,
+
+module_eval(<<'.,.,', 'kanbun_parser.y', 40)
+  def _reduce_14(val, _values, result)
+     result = "弗#{val[1]}"
     result
   end
 .,.,
 
 module_eval(<<'.,.,', 'kanbun_parser.y', 41)
-  def _reduce_10(val, _values, result)
-     result = "勿#{val[1]}"
+  def _reduce_15(val, _values, result)
+     result = "非#{val[1]}"
     result
   end
 .,.,
 
-module_eval(<<'.,.,', 'kanbun_parser.y', 46)
-  def _reduce_11(val, _values, result)
-     result = val[0]
+module_eval(<<'.,.,', 'kanbun_parser.y', 42)
+  def _reduce_16(val, _values, result)
+     result = "無#{val[1]}"
+    result
+  end
+.,.,
+
+module_eval(<<'.,.,', 'kanbun_parser.y', 43)
+  def _reduce_17(val, _values, result)
+     result = "莫#{val[1]}"
     result
   end
 .,.,
 
 module_eval(<<'.,.,', 'kanbun_parser.y', 47)
-  def _reduce_12(val, _values, result)
-     result = "#{val[0]}#{val[1]}"
+  def _reduce_18(val, _values, result)
+     result = "勿#{val[1]}"
     result
   end
 .,.,
 
-module_eval(<<'.,.,', 'kanbun_parser.y', 48)
-  def _reduce_13(val, _values, result)
-     result = "#{val[0]}#{val[1]}"
-    result
-  end
-.,.,
-
-module_eval(<<'.,.,', 'kanbun_parser.y', 49)
-  def _reduce_14(val, _values, result)
+module_eval(<<'.,.,', 'kanbun_parser.y', 51)
+  def _reduce_19(val, _values, result)
      result = val[0]
+    result
+  end
+.,.,
+
+module_eval(<<'.,.,', 'kanbun_parser.y', 52)
+  def _reduce_20(val, _values, result)
+     result = "#{val[0]}#{val[1]}"
+    result
+  end
+.,.,
+
+module_eval(<<'.,.,', 'kanbun_parser.y', 53)
+  def _reduce_21(val, _values, result)
+     result = "#{val[0]}#{val[1]}"
+    result
+  end
+.,.,
+
+module_eval(<<'.,.,', 'kanbun_parser.y', 54)
+  def _reduce_22(val, _values, result)
+     result = val[0]
+    result
+  end
+.,.,
+
+module_eval(<<'.,.,', 'kanbun_parser.y', 55)
+  def _reduce_23(val, _values, result)
+     result = "#{val[0]}#{val[1]}"
     result
   end
 .,.,
@@ -293,43 +360,26 @@ end   # class KanbunParser
 if __FILE__ == $0
   parser = KanbunParser.new
 
-  # ============================================================
-  # フェーズ1 テストケース
-  # PDFの句法一覧 no.1〜9 に対応
-  # ============================================================
   tests = [
-    # [入力,      期待出力,  句法,        備考]
-    ['不学',   '不学',   '否定・不', '動詞単体（no.1）'],
-    ['不読書', '不読書', '否定・不', '動詞+名詞（no.1）'],
-    ['不知道', '不知道', '否定・不', '動詞+名詞（no.1）'],
-    ['弗能',   '弗能',   '否定・弗', '能を追加（no.2）'],
-    ['非吾願', '非願',   '否定・非', '吾はスキップ、願はNOUN（no.4）'],
-    ['無足',   '無足',   '否定・無', '足を追加（no.5）'],
-    ['莫笑',   '莫笑',   '禁止・莫', '笑を追加、出力は否定句法と同形（no.7）'],
-    ['勿施',   '勿施',   '禁止・勿', '施を追加（no.8）'],
-    ['無敢食', '無敢食', '禁止・無', '敢を追加、VERB+VERBで連結（no.9）'],
-    ['見人',   '見人',   '動詞句',   '否定なし'],
-    ['知道',   '知道',   '動詞句',   '否定なし'],
+    # フェーズ1（回帰テスト）
+    ["不学",   "不学"],
+    ["不読書", "不読書"],
+    ["莫笑",   "莫笑"],
+    # フェーズ2a：二重否定
+    ["無非王土", "無非王土"],   # 王の土地でないものはない
+    ["無不陥",   "無不陥"],     # 陥さないものはない
+    ["非不慎",   "非不慎"],     # 慎まないのではない
+    # フェーズ2a：部分否定
+    ["不必賢",   "不必賢"],     # 必ずしも賢いわけではない
+    ["不常有",   "不常有"],     # いつもあるとは限らない
+    ["不復得",   "不復得"],     # 二度と得られない
   ]
 
-  pass_count = 0
-  fail_count = 0
-
-  tests.each do |input, expected, kokuho, note|
-    begin
-      result = parser.parse(input)
-      if result == expected
-        pass_count += 1
-        puts "PASS  #{input.ljust(5)} => #{result.ljust(6)}  [#{kokuho}] #{note}"
-      else
-        fail_count += 1
-        puts "FAIL  #{input.ljust(5)} => #{result.ljust(6)}  期待: #{expected}  [#{kokuho}] #{note}"
-      end
-    rescue => e
-      fail_count += 1
-      puts "ERR   #{input.ljust(5)} => #{e.message}  [#{kokuho}] #{note}"
-    end
+  tests.each do |input, expected|
+    result = parser.parse(input)
+    status = result == expected ? "OK" : "NG（期待:#{expected}）"
+    puts "#{input} => #{result}  #{status}"
+  rescue => e
+    puts "#{input} => エラー: #{e.message}"
   end
-
-  puts "\n#{pass_count}/#{tests.size} passed" + (fail_count > 0 ? "  (#{fail_count} failed)" : '')
 end

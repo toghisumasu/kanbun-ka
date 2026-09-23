@@ -60,3 +60,8 @@ group :development do
 end
 gem "dotenv-rails", groups: [:development, :test]
 gem "racc"
+
+group :development, :test do
+  gem "rspec-rails"
+end
+

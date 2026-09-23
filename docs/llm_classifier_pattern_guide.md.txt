@@ -1,0 +1,150 @@
+# LLMクラシファイアパターン実装ガイド
+# ファイル名：llm_classifier_pattern_guide.md
+
+**作成日**: 2026-09-20  
+**位置づけ**: SSOT。各プロジェクトの設計判断メモから参照する共通資料。  
+**出典**: keiba-classifier P1/P2ベンチマーク（2026-09-20実施）
+
+---
+
+## 0. 結論を先に
+
+> **text/JSON生成を捨てて「BUY/SKIP」判断のみに特化することで、
+> ローカルLLMが150〜550msで94〜100%の精度で分類できる。**
+
+これは「生成」ではなく「評価」としてLLMを使うパターンであり、
+RAGガイドの③言語化層とは別の用途である。
+
+---
+
+## 1. パターンの概要
+
+通常のLLM活用は「入力→生成→テキスト出力」。  
+クラシファイアパターンは「入力→判断→1語出力（BUY/SKIP等）」。
+
+通常: プロンプト → [推論+生成] → テキスト (数秒)
+分類: プロンプト → [判断のみ] → BUY/SKIP (150〜550ms)
+
+
+トークン生成数を最小化（`num_predict: 20`）することで
+高速化を実現する。
+
+---
+
+## 2. 実測値（Mac mini M4 / Ollama 0.23.2）
+
+| モデル | サイズ | 定常レイテンシ | 一致率(36件) | 用途 |
+|---|---|---|---|---|
+| qwen2.5:1.5b | 986MB | **154ms** | 94% | 速度重視 |
+| qwen3:8b | 5.2GB | **541ms** | **100%** | 精度重視 |
+| qwen3:30b-a3b | 18GB | 970ms | 66% | 不向き※ |
+
+※ qwen3:30b-a3bはThinking特化版のため分類器用途に不向き。
+  `think: false`が効かず内部思考がrawに漏れる。
+
+---
+
+## 3. 実装の要点
+
+### 3-1. Ollama APIパラメータ
+
+```ruby
+body = {
+  model: model,
+  prompt: prompt,
+  stream: false,
+  think: false,        # qwen3系必須。thinkingを無効化
+  options: {
+    temperature: 0.0,  # 決定論的出力
+    num_predict: 20    # トークン最小化で高速化
+  }
+}.to_json
+
+think: false はプロンプトテキストへの /no_think 記述では効かない。
+APIパラメータとして渡す必要がある。
+
+3-2. プロンプト設計の3要素
+① 判断基準を明示（数値閾値）
+② Few-shot例を3件（BUY2件・SKIP1件程度）
+③ 「一語だけ答えてください」と明示
+
+例：
+判断基準: 複勝率35%以上かつ期待値1.5以上でBUY、それ以外はSKIP
+
+例:
+複勝率42.9% 期待値2.881 → BUY
+複勝率25.0% 期待値1.1 → SKIP
+複勝率38.0% 期待値1.6 → BUY
+
+3-3. % フォーマット文字列の罠
+
+Rubyの % フォーマット（PROMPT_TEMPLATE % hash）を使う場合、
+プロンプト中の % はすべて %% にエスケープする必要がある。
+例外なく全箇所。見落としが起きやすいため、
+#{}埋め込み方式への変更を検討する価値あり。
+
+4. 乖離パターンの知見
+
+P2実験（36件実データ）で判明した乖離ケース：
+
+「複勝率は低いが期待値が高い穴馬」への対応が異なる
+
+条件	Rubyルール	LLM(1.5b)
+複勝率9.6%・期待値8.764	SKIP	BUY
+複勝率9.1%・期待値11.551	SKIP	BUY
+
+LLMは複勝率よりも期待値を重視する傾向あり。
+これはルール違反ではなく「別の判断軸」と解釈できる。
+プロンプトで複勝率の閾値を強調することで矯正可能と推測。
+
+5. 3層構造ガイドとの関係
+
+llm_three_layer_architecture_guide.md の補足：
+
+層	役割	担当
+①ディスパッチ	どの処理を呼ぶか	Ruby
+②検証	事実確認・確定値	Ruby + DB
+③言語化	自然な文章表現	LLM（生成）
+③'分類	BUY/SKIPの判断	LLM（分類） ← 今回追加
+
+③と③'は別の用途。生成が不要な判断タスクには分類パターンが適する。
+
+6. 各プロジェクトへの適用候補
+
+プロジェクト	適用候補	効果の見込み
+keiba-web	条件別BUY/SKIP判定	◎（実証済み）
+keiba-analyzer	買い候補スコアリング	◎
+waka-collector	bui距離適合チェック（Stage 1.5）	○
+waka-collector	恋句の文脈判定	○
+eiyokeikaku_app	食品データの適合判定	△（要検討）
+
+7. Ollama運用上の注意
+
+	•	デフォルトの KEEP_ALIVE: 5m0s でSSHセッション切断後に停止する
+	•	継続運用には nohup ollama serve > /tmp/ollama.log 2>&1 &
+	•	launchd登録で恒常的な自動起動も可能
+
+8. 次のアクション候補
+
+	☐︎	keiba-web へのマージ検討（P3乖離分析→P4判断）
+	☐︎	waka-collector の bui距離チェックへの適用実験
+	☐︎	プロンプトの %{} を #{} 埋め込みに書き換え（保守性向上）
+	☐︎	llama.cppのjev互換サーバー組み込み動向を注視
+（実現すればOllamaで40ms級が射程に入る）
+
+この資料はnobuson-projectsで管理。rag_adoption_guide.md・
+llm_three_layer_architecture_guide.md とセットで参照すること。
+
+
+---
+
+保存先：
+
+```bash
+cd /Volumes/externalHDD/projects/nobuson-projects
+vi llm_classifier_pattern_guide.md
+
+貼り付け後pushまで：
+git add llm_classifier_pattern_guide.md
+git commit -m "docs: LLMクラシファイアパターンガイド追加（keiba-classifier P1/P2知見）"
+git push
