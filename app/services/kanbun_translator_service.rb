@@ -65,42 +65,6 @@ class KanbunTranslatorService
   # ---------------------------------------------------------
   def build_prompt(original, skeleton)
     if skeleton
-      <<~PROMPT
-        日本語の語彙と漢文マーカーが混在した「骨格」を、漢文白文に変換してください。
-        動詞・名詞は漢字1〜2字に置き換え、マーカー（不/使/被/有/無/於/矣/乎）はそのまま使用。
-
-        骨格：私 食べる 林檎
-        白文：我食林檎
-
-        骨格：王 使 人 行く 矣
-        白文：王使人行矣
-
-        骨格：犬 走る
-        白文：犬走
-
-        骨格：馬 不 速い
-        白文：馬不速
-
-        骨格：王 集める 号令する 民 矣
-        白文：王集民號令矣
-
-        骨格：#{skeleton}
-        白文：
-      PROMPT
-    else
-      <<~PROMPT
-        以下の現代日本語を漢文の白文に変換してください。
-        出力は白文のみ・空白なし・1行。
-
-        原文：#{original}
-        白文：
-      PROMPT
-    end
-  end
-
-
-  def build_prompt(original, skeleton)
-    if skeleton
       # 骨格に実際に含まれるマーカーだけ抽出
       all_markers  = %w[不 使 被 有 無 莫如 不若 於 矣 乎]
       used_markers = all_markers.select { |m| skeleton.include?(m) }
@@ -120,7 +84,13 @@ class KanbunTranslatorService
         白文：
       PROMPT
     else
-      # ...
+      <<~PROMPT
+        以下の現代日本語を漢文の白文に変換してください。
+        出力は白文のみ・空白なし・1行。
+
+        原文：#{original}
+        白文：
+      PROMPT
     end
   end
 
