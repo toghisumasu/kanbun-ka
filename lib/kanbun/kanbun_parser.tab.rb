@@ -10,10 +10,12 @@ require 'strscan'
 
 class KanbunParser < Racc::Parser
 
-module_eval(<<'...end kanbun_parser.y/module_eval...', 'kanbun_parser.y', 63)
+module_eval(<<'...end kanbun_parser.y/module_eval...', 'kanbun_parser.y', 91)
 
-VERBS = %w[学 読 書 見 聞 知 行 来 食 飲 思 言 得 去 入 出 為 陥 慎 争 賢 有 笑]
+VERBS = %w[学 読 書 見 聞 知 行 来 食 飲 思 言 得 去 入 出 為 陥 慎 争 賢 有 笑
+           植 買 戚 易 施]
 NOUNS = %w[人 君 臣 子 民 文 道 国 師 天 地 王 士 物 事 土 寒 言]
+
 
 def parse(str)
   @tokens = tokenize(str)
@@ -30,17 +32,24 @@ def tokenize(str)
   scanner = StringScanner.new(str)
   until scanner.eos?
     case
-    when scanner.scan(/不/) then tokens << [:NEG_BU,        '不']
-    when scanner.scan(/弗/) then tokens << [:NEG_FU,        '弗']
-    when scanner.scan(/非/) then tokens << [:NEG_HI,        '非']
-    when scanner.scan(/無/) then tokens << [:NEG_MU,        '無']
-    when scanner.scan(/莫/) then tokens << [:NEG_BAKU,      '莫']
-    when scanner.scan(/勿/) then tokens << [:PROHIBIT_NAKA, '勿']
-    when scanner.scan(/必/) then tokens << [:HITSZU,        '必']
-    when scanner.scan(/常/) then tokens << [:JOU,           '常']
-    when scanner.scan(/復/) then tokens << [:MATA,          '復']
-    when scanner.scan(Regexp.new("[#{VERBS.join}]")) then tokens << [:VERB, scanner.matched]
-    when scanner.scan(Regexp.new("[#{NOUNS.join}]")) then tokens << [:NOUN, scanner.matched]
+      when scanner.scan(/莫如/) then tokens << [:NEG_BU,        '莫如']
+      when scanner.scan(/莫若/) then tokens << [:NEG_BU,        '莫若']
+      when scanner.scan(/不若/) then tokens << [:NEG_BU,        '不若']
+      when scanner.scan(/不如/) then tokens << [:NEG_BU,        '不如']
+      when scanner.scan(/与/)   then tokens << [:NEG_BU,        '与']
+      when scanner.scan(/寧/)   then tokens << [:NEG_BU,        '寧']
+      when scanner.scan(/況/)   then tokens << [:NEG_FU,        '況']
+      when scanner.scan(/不/)   then tokens << [:NEG_FU,        '不']
+      when scanner.scan(/弗/)   then tokens << [:NEG_FU,        '弗']
+      when scanner.scan(/非/)   then tokens << [:NEG_HI,        '非']
+      when scanner.scan(/無/)   then tokens << [:NEG_MU,        '無']
+      when scanner.scan(/莫/)   then tokens << [:NEG_BAKU,      '莫']
+      when scanner.scan(/勿/)   then tokens << [:PROHIBIT_NAKA, '勿']
+      when scanner.scan(/必/)   then tokens << [:HITSZU,        '必']
+      when scanner.scan(/常/)   then tokens << [:JOU,           '常']
+      when scanner.scan(/復/)   then tokens << [:MATA,          '復']
+      when scanner.scan(Regexp.new("[#{VERBS.join}]")) then tokens << [:VERB, scanner.matched]
+      when scanner.scan(Regexp.new("[#{NOUNS.join}]")) then tokens << [:NOUN, scanner.matched]
     else scanner.getch
     end
   end
@@ -52,76 +61,102 @@ end
 ##### State transition tables begin ###
 
 racc_action_table = [
-    10,    11,     9,     8,    12,    13,    18,    16,    17,    14,
-    15,    20,    14,    15,    31,    14,    15,    14,    15,    32,
-    14,    15,    22,    23,    24,    14,    15,    14,    15,    30,
-    29,    14,    15,    14,    15,    14,    15,    14,    15,    14,
-    15,    14,    15 ]
+    13,    14,    12,    11,    15,    16,    28,    21,    27,    30,
+    32,    33,    34,    19,    20,    41,    17,    18,    17,    18,
+    17,    18,    17,    18,    44,    17,    18,    22,    23,    24,
+    25,    17,    18,    26,    17,    18,    40,    39,    17,    18,
+    17,    18,    17,    18,    17,    18,    17,    18,    17,    18,
+    17,    18,    17,    18,    17,    18,    17,    18,    17,    18,
+    17,    18,    17,    18,    17,    18,    17,    18,    56,    57 ]
 
 racc_action_check = [
-     0,     0,     0,     0,     0,     0,     8,     1,     8,     0,
-     0,     9,    11,    11,    15,     8,     8,    12,    12,    16,
-     9,     9,    10,    10,    10,    10,    10,    13,    13,    14,
-    14,    17,    17,    18,    18,    20,    20,    22,    22,    23,
-    23,    24,    24 ]
+     0,     0,     0,     0,     0,     0,    11,     1,    11,    12,
+    13,    13,    13,     0,     0,    18,     0,     0,    14,    14,
+    13,    13,    11,    11,    21,    12,    12,    10,    10,    10,
+    10,    15,    15,    10,    16,    16,    17,    17,    19,    19,
+    20,    20,    22,    22,    23,    23,    24,    24,    25,    25,
+    26,    26,    27,    27,    28,    28,    30,    30,    32,    32,
+    33,    33,    34,    34,    56,    56,    57,    57,    42,    43 ]
 
 racc_action_pointer = [
-    -2,     7,   nil,   nil,   nil,   nil,   nil,   nil,     4,     9,
-    14,     1,     6,    16,    18,     2,    19,    20,    22,   nil,
-    24,   nil,    26,    28,    30,   nil,   nil,   nil,   nil,   nil,
-   nil,   nil,   nil,   nil,   nil,   nil,   nil,   nil,   nil ]
+    -2,     7,   nil,   nil,   nil,   nil,   nil,   nil,   nil,   nil,
+    16,     4,     7,     2,     0,    13,    16,    18,    -4,    20,
+    22,    24,    24,    26,    28,    30,    32,    34,    36,   nil,
+    38,   nil,    40,    42,    44,   nil,   nil,   nil,   nil,   nil,
+   nil,   nil,    52,    64,   nil,   nil,   nil,   nil,   nil,   nil,
+   nil,   nil,   nil,   nil,   nil,   nil,    46,    48,   nil,   nil ]
 
 racc_action_default = [
-   -24,   -24,    -1,    -2,    -3,    -4,    -5,    -6,   -24,   -24,
-   -24,   -24,   -24,   -24,   -19,   -22,   -24,   -24,   -24,   -16,
-   -24,   -15,   -24,   -24,   -24,   -13,   -14,   -17,   -18,   -20,
-   -21,   -23,    39,    -7,    -8,    -9,   -10,   -11,   -12 ]
+   -34,   -34,    -1,    -2,    -3,    -4,    -5,    -6,    -7,    -8,
+    -9,   -34,   -34,   -34,   -34,   -34,   -34,   -22,   -25,   -34,
+   -34,   -34,   -34,   -34,   -34,   -34,   -34,   -34,   -34,   -19,
+   -34,   -18,   -34,   -34,   -34,   -16,   -17,   -20,   -21,   -23,
+   -24,   -26,   -34,   -34,    60,   -27,   -28,   -29,   -30,   -33,
+   -10,   -11,   -12,   -13,   -14,   -15,   -34,   -34,   -31,   -32 ]
 
 racc_goto_table = [
-     7,     1,     2,     3,     4,     5,     6,   nil,    19,    21,
-    25,    26,    27,    28,   nil,   nil,   nil,    33,    34,   nil,
-    35,   nil,    36,    37,    38 ]
+    10,     1,     2,     3,     4,     5,     6,     7,     8,     9,
+   nil,    29,    31,    35,    36,    37,    38,   nil,   nil,    42,
+    43,   nil,    45,    46,    47,    48,    49,    50,    51,   nil,
+    52,   nil,    53,    54,    55,   nil,   nil,   nil,   nil,   nil,
+   nil,   nil,   nil,   nil,   nil,   nil,   nil,   nil,   nil,   nil,
+   nil,   nil,   nil,   nil,   nil,   nil,    58,    59 ]
 
 racc_goto_check = [
-     7,     1,     2,     3,     4,     5,     6,   nil,     7,     7,
-     7,     7,     7,     7,   nil,   nil,   nil,     7,     7,   nil,
-     7,   nil,     7,     7,     7 ]
+    10,     1,     2,     3,     4,     5,     6,     7,     8,     9,
+   nil,    10,    10,    10,    10,    10,    10,   nil,   nil,    10,
+    10,   nil,    10,    10,    10,    10,    10,    10,    10,   nil,
+    10,   nil,    10,    10,    10,   nil,   nil,   nil,   nil,   nil,
+   nil,   nil,   nil,   nil,   nil,   nil,   nil,   nil,   nil,   nil,
+   nil,   nil,   nil,   nil,   nil,   nil,    10,    10 ]
 
 racc_goto_pointer = [
-   nil,     1,     2,     3,     4,     5,     6,     0 ]
+   nil,     1,     2,     3,     4,     5,     6,     7,     8,     9,
+     0 ]
 
 racc_goto_default = [
-   nil,   nil,   nil,   nil,   nil,   nil,   nil,   nil ]
+   nil,   nil,   nil,   nil,   nil,   nil,   nil,   nil,   nil,   nil,
+   nil ]
 
 racc_reduce_table = [
   0, 0, :racc_error,
-  1, 14, :_reduce_1,
-  1, 15, :_reduce_2,
-  1, 15, :_reduce_3,
-  1, 15, :_reduce_4,
-  1, 15, :_reduce_5,
-  1, 15, :_reduce_6,
-  3, 16, :_reduce_7,
-  3, 16, :_reduce_8,
-  3, 16, :_reduce_9,
-  3, 17, :_reduce_10,
-  3, 17, :_reduce_11,
-  3, 17, :_reduce_12,
-  2, 18, :_reduce_13,
-  2, 18, :_reduce_14,
-  2, 18, :_reduce_15,
-  2, 18, :_reduce_16,
-  2, 18, :_reduce_17,
-  2, 19, :_reduce_18,
-  1, 20, :_reduce_19,
-  2, 20, :_reduce_20,
-  2, 20, :_reduce_21,
-  1, 20, :_reduce_22,
-  2, 20, :_reduce_23 ]
+  1, 21, :_reduce_1,
+  1, 22, :_reduce_2,
+  1, 22, :_reduce_3,
+  1, 22, :_reduce_4,
+  1, 22, :_reduce_5,
+  1, 22, :_reduce_6,
+  1, 22, :_reduce_7,
+  1, 22, :_reduce_8,
+  1, 22, :_reduce_9,
+  3, 23, :_reduce_10,
+  3, 23, :_reduce_11,
+  3, 23, :_reduce_12,
+  3, 24, :_reduce_13,
+  3, 24, :_reduce_14,
+  3, 24, :_reduce_15,
+  2, 28, :_reduce_16,
+  2, 28, :_reduce_17,
+  2, 28, :_reduce_18,
+  2, 28, :_reduce_19,
+  2, 28, :_reduce_20,
+  2, 29, :_reduce_21,
+  1, 30, :_reduce_22,
+  2, 30, :_reduce_23,
+  2, 30, :_reduce_24,
+  1, 30, :_reduce_25,
+  2, 30, :_reduce_26,
+  3, 25, :_reduce_27,
+  3, 25, :_reduce_28,
+  3, 25, :_reduce_29,
+  3, 25, :_reduce_30,
+  4, 26, :_reduce_31,
+  4, 26, :_reduce_32,
+  3, 27, :_reduce_33 ]
 
-racc_reduce_n = 24
+racc_reduce_n = 34
 
-racc_shift_n = 39
+racc_shift_n = 60
 
 racc_token_table = {
   false => 0,
@@ -135,10 +170,17 @@ racc_token_table = {
   :HITSZU => 8,
   :JOU => 9,
   :MATA => 10,
-  :VERB => 11,
-  :NOUN => 12 }
+  :MOKU_NAKU => 11,
+  :MOKU_SHIKA => 12,
+  :FUSHIKA => 13,
+  :FUNYUU => 14,
+  :YO_NIMO => 15,
+  :NAMU => 16,
+  :IWA_N_YA => 17,
+  :VERB => 18,
+  :NOUN => 19 }
 
-racc_nt_base = 13
+racc_nt_base = 20
 
 racc_use_result_var = true
 
@@ -171,6 +213,13 @@ Racc_token_to_s_table = [
   "HITSZU",
   "JOU",
   "MATA",
+  "MOKU_NAKU",
+  "MOKU_SHIKA",
+  "FUSHIKA",
+  "FUNYUU",
+  "YO_NIMO",
+  "NAMU",
+  "IWA_N_YA",
   "VERB",
   "NOUN",
   "$start",
@@ -178,6 +227,9 @@ Racc_token_to_s_table = [
   "clause",
   "double_neg_clause",
   "partial_neg_clause",
+  "compare_clause",
+  "select_clause",
+  "suppress_clause",
   "neg_clause",
   "prohibit_clause",
   "verb_phrase" ]
@@ -189,163 +241,233 @@ Racc_debug_parser = false
 
 # reduce 0 omitted
 
-module_eval(<<'.,.,', 'kanbun_parser.y', 10)
+module_eval(<<'.,.,', 'kanbun_parser.y', 15)
   def _reduce_1(val, _values, result)
      result = val[0]
     result
   end
 .,.,
 
-module_eval(<<'.,.,', 'kanbun_parser.y', 13)
+module_eval(<<'.,.,', 'kanbun_parser.y', 18)
   def _reduce_2(val, _values, result)
      result = val[0]
     result
   end
 .,.,
 
-module_eval(<<'.,.,', 'kanbun_parser.y', 14)
+module_eval(<<'.,.,', 'kanbun_parser.y', 19)
   def _reduce_3(val, _values, result)
      result = val[0]
     result
   end
 .,.,
 
-module_eval(<<'.,.,', 'kanbun_parser.y', 15)
+module_eval(<<'.,.,', 'kanbun_parser.y', 20)
   def _reduce_4(val, _values, result)
      result = val[0]
     result
   end
 .,.,
 
-module_eval(<<'.,.,', 'kanbun_parser.y', 16)
+module_eval(<<'.,.,', 'kanbun_parser.y', 21)
   def _reduce_5(val, _values, result)
      result = val[0]
     result
   end
 .,.,
 
-module_eval(<<'.,.,', 'kanbun_parser.y', 17)
+module_eval(<<'.,.,', 'kanbun_parser.y', 22)
   def _reduce_6(val, _values, result)
      result = val[0]
     result
   end
 .,.,
 
-module_eval(<<'.,.,', 'kanbun_parser.y', 24)
+module_eval(<<'.,.,', 'kanbun_parser.y', 23)
   def _reduce_7(val, _values, result)
-     result = "無非#{val[2]}"
-    result
-  end
-.,.,
-
-module_eval(<<'.,.,', 'kanbun_parser.y', 25)
-  def _reduce_8(val, _values, result)
-     result = "無不#{val[2]}"
-    result
-  end
-.,.,
-
-module_eval(<<'.,.,', 'kanbun_parser.y', 26)
-  def _reduce_9(val, _values, result)
-     result = "非不#{val[2]}"
-    result
-  end
-.,.,
-
-module_eval(<<'.,.,', 'kanbun_parser.y', 33)
-  def _reduce_10(val, _values, result)
-     result = "不必#{val[2]}"
-    result
-  end
-.,.,
-
-module_eval(<<'.,.,', 'kanbun_parser.y', 34)
-  def _reduce_11(val, _values, result)
-     result = "不常#{val[2]}"
-    result
-  end
-.,.,
-
-module_eval(<<'.,.,', 'kanbun_parser.y', 35)
-  def _reduce_12(val, _values, result)
-     result = "不復#{val[2]}"
-    result
-  end
-.,.,
-
-module_eval(<<'.,.,', 'kanbun_parser.y', 39)
-  def _reduce_13(val, _values, result)
-     result = "不#{val[1]}"
-    result
-  end
-.,.,
-
-module_eval(<<'.,.,', 'kanbun_parser.y', 40)
-  def _reduce_14(val, _values, result)
-     result = "弗#{val[1]}"
-    result
-  end
-.,.,
-
-module_eval(<<'.,.,', 'kanbun_parser.y', 41)
-  def _reduce_15(val, _values, result)
-     result = "非#{val[1]}"
-    result
-  end
-.,.,
-
-module_eval(<<'.,.,', 'kanbun_parser.y', 42)
-  def _reduce_16(val, _values, result)
-     result = "無#{val[1]}"
-    result
-  end
-.,.,
-
-module_eval(<<'.,.,', 'kanbun_parser.y', 43)
-  def _reduce_17(val, _values, result)
-     result = "莫#{val[1]}"
-    result
-  end
-.,.,
-
-module_eval(<<'.,.,', 'kanbun_parser.y', 47)
-  def _reduce_18(val, _values, result)
-     result = "勿#{val[1]}"
-    result
-  end
-.,.,
-
-module_eval(<<'.,.,', 'kanbun_parser.y', 51)
-  def _reduce_19(val, _values, result)
      result = val[0]
     result
   end
 .,.,
 
-module_eval(<<'.,.,', 'kanbun_parser.y', 52)
+module_eval(<<'.,.,', 'kanbun_parser.y', 24)
+  def _reduce_8(val, _values, result)
+     result = val[0]
+    result
+  end
+.,.,
+
+module_eval(<<'.,.,', 'kanbun_parser.y', 25)
+  def _reduce_9(val, _values, result)
+     result = val[0]
+    result
+  end
+.,.,
+
+module_eval(<<'.,.,', 'kanbun_parser.y', 32)
+  def _reduce_10(val, _values, result)
+     result = "無非#{val[2]}"
+    result
+  end
+.,.,
+
+module_eval(<<'.,.,', 'kanbun_parser.y', 33)
+  def _reduce_11(val, _values, result)
+     result = "無不#{val[2]}"
+    result
+  end
+.,.,
+
+module_eval(<<'.,.,', 'kanbun_parser.y', 34)
+  def _reduce_12(val, _values, result)
+     result = "非不#{val[2]}"
+    result
+  end
+.,.,
+
+module_eval(<<'.,.,', 'kanbun_parser.y', 41)
+  def _reduce_13(val, _values, result)
+     result = "不必#{val[2]}"
+    result
+  end
+.,.,
+
+module_eval(<<'.,.,', 'kanbun_parser.y', 42)
+  def _reduce_14(val, _values, result)
+     result = "不常#{val[2]}"
+    result
+  end
+.,.,
+
+module_eval(<<'.,.,', 'kanbun_parser.y', 43)
+  def _reduce_15(val, _values, result)
+     result = "不復#{val[2]}"
+    result
+  end
+.,.,
+
+module_eval(<<'.,.,', 'kanbun_parser.y', 47)
+  def _reduce_16(val, _values, result)
+     result = "不#{val[1]}"
+    result
+  end
+.,.,
+
+module_eval(<<'.,.,', 'kanbun_parser.y', 48)
+  def _reduce_17(val, _values, result)
+     result = "弗#{val[1]}"
+    result
+  end
+.,.,
+
+module_eval(<<'.,.,', 'kanbun_parser.y', 49)
+  def _reduce_18(val, _values, result)
+     result = "非#{val[1]}"
+    result
+  end
+.,.,
+
+module_eval(<<'.,.,', 'kanbun_parser.y', 50)
+  def _reduce_19(val, _values, result)
+     result = "無#{val[1]}"
+    result
+  end
+.,.,
+
+module_eval(<<'.,.,', 'kanbun_parser.y', 51)
   def _reduce_20(val, _values, result)
-     result = "#{val[0]}#{val[1]}"
+     result = "莫#{val[1]}"
     result
   end
 .,.,
 
-module_eval(<<'.,.,', 'kanbun_parser.y', 53)
+module_eval(<<'.,.,', 'kanbun_parser.y', 55)
   def _reduce_21(val, _values, result)
-     result = "#{val[0]}#{val[1]}"
+     result = "勿#{val[1]}"
     result
   end
 .,.,
 
-module_eval(<<'.,.,', 'kanbun_parser.y', 54)
+module_eval(<<'.,.,', 'kanbun_parser.y', 59)
   def _reduce_22(val, _values, result)
      result = val[0]
     result
   end
 .,.,
 
-module_eval(<<'.,.,', 'kanbun_parser.y', 55)
+module_eval(<<'.,.,', 'kanbun_parser.y', 60)
   def _reduce_23(val, _values, result)
      result = "#{val[0]}#{val[1]}"
+    result
+  end
+.,.,
+
+module_eval(<<'.,.,', 'kanbun_parser.y', 61)
+  def _reduce_24(val, _values, result)
+     result = "#{val[0]}#{val[1]}"
+    result
+  end
+.,.,
+
+module_eval(<<'.,.,', 'kanbun_parser.y', 62)
+  def _reduce_25(val, _values, result)
+     result = val[0]
+    result
+  end
+.,.,
+
+module_eval(<<'.,.,', 'kanbun_parser.y', 63)
+  def _reduce_26(val, _values, result)
+     result = "#{val[0]}#{val[1]}"
+    result
+  end
+.,.,
+
+module_eval(<<'.,.,', 'kanbun_parser.y', 68)
+  def _reduce_27(val, _values, result)
+     result = "#{val[0]}莫如#{val[2]}"
+    result
+  end
+.,.,
+
+module_eval(<<'.,.,', 'kanbun_parser.y', 69)
+  def _reduce_28(val, _values, result)
+     result = "#{val[0]}莫若#{val[2]}"
+    result
+  end
+.,.,
+
+module_eval(<<'.,.,', 'kanbun_parser.y', 70)
+  def _reduce_29(val, _values, result)
+     result = "#{val[0]}不若#{val[2]}"
+    result
+  end
+.,.,
+
+module_eval(<<'.,.,', 'kanbun_parser.y', 71)
+  def _reduce_30(val, _values, result)
+     result = "#{val[0]}不如#{val[2]}"
+    result
+  end
+.,.,
+
+module_eval(<<'.,.,', 'kanbun_parser.y', 76)
+  def _reduce_31(val, _values, result)
+     result = "与#{val[1]寧{val[3]}"
+    result
+  end
+.,.,
+
+module_eval(<<'.,.,', 'kanbun_parser.y', 77)
+  def _reduce_32(val, _values, result)
+     result = "寧#{val[1]無{val[3]}"
+    result
+  end
+.,.,
+
+module_eval(<<'.,.,', 'kanbun_parser.y', 82)
+  def _reduce_33(val, _values, result)
+     result = "#{val[0]}況#{val[2]乎}"
     result
   end
 .,.,
@@ -373,6 +495,12 @@ if __FILE__ == $0
     ["不必賢",   "不必賢"],     # 必ずしも賢いわけではない
     ["不常有",   "不常有"],     # いつもあるとは限らない
     ["不復得",   "不復得"],     # 二度と得られない
+     フェーズ2b：
+    ["計莫如植",   "計莫如植"],
+    ["地不若人",   "地不若人"],
+    ["与易寧戚",   "与易寧戚"],
+    ["寧為無為",   "寧為無為"],
+    ["馬況人乎",   "馬況人乎"], 
   ]
 
   tests.each do |input, expected|

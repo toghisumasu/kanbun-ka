@@ -4,6 +4,11 @@ class KanbunParser
 token NEG_BU NEG_FU NEG_HI NEG_MU NEG_BAKU
       PROHIBIT_NAKA
       HITSZU JOU MATA        # 必・常・復（部分否定用）
+      MOKU_NAKU MOKU_SHIKA
+      FUSHIKA FUNYUU
+      YO_NIMO
+      NAMU
+      IWA_N_YA
       VERB NOUN
 
 rule
@@ -13,6 +18,9 @@ rule
   clause
     : double_neg_clause  { result = val[0] }   # 二重否定（新規）
     | partial_neg_clause { result = val[0] }   # 部分否定（新規）
+    | compare_clause     { result = val[0] }
+    | select_clause      { result = val[0] }
+    | suppress_clause    { result = val[0] }
     | neg_clause         { result = val[0] }   # 否定（フェーズ1）
     | prohibit_clause    { result = val[0] }   # 禁止（フェーズ1）
     | verb_phrase        { result = val[0] }
@@ -54,15 +62,37 @@ rule
     | VERB VERB       { result = "#{val[0]}#{val[1]}" }
     | NOUN            { result = val[0] }
     | NOUN NOUN       { result = "#{val[0]}#{val[1]}" }
-end
+
+# 比較句法（莫如・莫若・不若・不如）
+# 百年之計莫如植樹　→ 百年の計は樹を植えるに如くは莫し
+  compare_clause
+    : verb_phrase MOKU_NAKU    verb_phrase { result = "#{val[0]}莫如#{val[2]}" }
+    | verb_phrase MOKU_SHIKA   verb_phrase { result = "#{val[0]}莫若#{val[2]}" }
+    | verb_phrase FUSHIKA      verb_phrase { result = "#{val[0]}不若#{val[2]}" }
+    | verb_phrase FUNYUU       verb_phrase { result = "#{val[0]}不如#{val[2]}" }
+
+# 選択句法（与A寧B・寧A無B）
+# 喪与易寧戚　→ AせんよりはむしろB
+  select_clause
+    : YO_NIMO verb_phrase NAMU   verb_phrase { result = "与#{val[1]寧{val[3]}" }
+    | NAMU    verb_phrase NEG_MU verb_phrase { result = "寧#{val[1]無{val[3]}" }
+
+# 抑揚句法（況〜乎）   
+# 死馬且買之、況生者乎　→ AすらかつB、いわんやCをや
+  suppress_clause
+    : verb_phrase IWA_N_YA     verb_phrase { result = "#{val[0]}況#{val[2]乎}" }
+
+  end
 
 ---- header
 require 'strscan'
 
 ---- inner
 
-VERBS = %w[学 読 書 見 聞 知 行 来 食 飲 思 言 得 去 入 出 為 陥 慎 争 賢 有 笑]
+VERBS = %w[学 読 書 見 聞 知 行 来 食 飲 思 言 得 去 入 出 為 陥 慎 争 賢 有 笑
+           植 買 戚 易 施]
 NOUNS = %w[人 君 臣 子 民 文 道 国 師 天 地 王 士 物 事 土 寒 言]
+
 
 def parse(str)
   @tokens = tokenize(str)
@@ -79,17 +109,24 @@ def tokenize(str)
   scanner = StringScanner.new(str)
   until scanner.eos?
     case
-    when scanner.scan(/不/) then tokens << [:NEG_BU,        '不']
-    when scanner.scan(/弗/) then tokens << [:NEG_FU,        '弗']
-    when scanner.scan(/非/) then tokens << [:NEG_HI,        '非']
-    when scanner.scan(/無/) then tokens << [:NEG_MU,        '無']
-    when scanner.scan(/莫/) then tokens << [:NEG_BAKU,      '莫']
-    when scanner.scan(/勿/) then tokens << [:PROHIBIT_NAKA, '勿']
-    when scanner.scan(/必/) then tokens << [:HITSZU,        '必']
-    when scanner.scan(/常/) then tokens << [:JOU,           '常']
-    when scanner.scan(/復/) then tokens << [:MATA,          '復']
-    when scanner.scan(Regexp.new("[#{VERBS.join}]")) then tokens << [:VERB, scanner.matched]
-    when scanner.scan(Regexp.new("[#{NOUNS.join}]")) then tokens << [:NOUN, scanner.matched]
+      when scanner.scan(/莫如/) then tokens << [:NEG_BU,        '莫如']
+      when scanner.scan(/莫若/) then tokens << [:NEG_BU,        '莫若']
+      when scanner.scan(/不若/) then tokens << [:NEG_BU,        '不若']
+      when scanner.scan(/不如/) then tokens << [:NEG_BU,        '不如']
+      when scanner.scan(/与/)   then tokens << [:NEG_BU,        '与']
+      when scanner.scan(/寧/)   then tokens << [:NEG_BU,        '寧']
+      when scanner.scan(/況/)   then tokens << [:NEG_FU,        '況']
+      when scanner.scan(/不/)   then tokens << [:NEG_FU,        '不']
+      when scanner.scan(/弗/)   then tokens << [:NEG_FU,        '弗']
+      when scanner.scan(/非/)   then tokens << [:NEG_HI,        '非']
+      when scanner.scan(/無/)   then tokens << [:NEG_MU,        '無']
+      when scanner.scan(/莫/)   then tokens << [:NEG_BAKU,      '莫']
+      when scanner.scan(/勿/)   then tokens << [:PROHIBIT_NAKA, '勿']
+      when scanner.scan(/必/)   then tokens << [:HITSZU,        '必']
+      when scanner.scan(/常/)   then tokens << [:JOU,           '常']
+      when scanner.scan(/復/)   then tokens << [:MATA,          '復']
+      when scanner.scan(Regexp.new("[#{VERBS.join}]")) then tokens << [:VERB, scanner.matched]
+      when scanner.scan(Regexp.new("[#{NOUNS.join}]")) then tokens << [:NOUN, scanner.matched]
     else scanner.getch
     end
   end
@@ -115,6 +152,12 @@ if __FILE__ == $0
     ["不必賢",   "不必賢"],     # 必ずしも賢いわけではない
     ["不常有",   "不常有"],     # いつもあるとは限らない
     ["不復得",   "不復得"],     # 二度と得られない
+     フェーズ2b：
+    ["計莫如植",   "計莫如植"],
+    ["地不若人",   "地不若人"],
+    ["与易寧戚",   "与易寧戚"],
+    ["寧為無為",   "寧為無為"],
+    ["馬況人乎",   "馬況人乎"], 
   ]
 
   tests.each do |input, expected|
