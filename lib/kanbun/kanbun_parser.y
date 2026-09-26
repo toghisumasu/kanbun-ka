@@ -10,6 +10,10 @@ token NEG_BU NEG_FU NEG_HI NEG_MU NEG_BAKU
       KATEN_SHIKA KATEN_NYO KATEN_IYA
       KATEN_IEDOMO KATEN_TATOI
       GENTEI_YUI GENTEI_DOKU
+      SHI_KO SHI_SAI SHI_JA
+      HAN_AI FUKI_MATA
+      GI_AN GI_DARE GI_IZURE GI_NANI
+      GI_NANSURU GI_NANMOTE GI_IKANI_A GI_IKANI_B
       VERB NOUN
 
 rule
@@ -25,6 +29,9 @@ rule
     | katen_clause       { result = val[0] } 
     | gyaku_katen_clause { result = val[0] }
     | gentei_clause      { result = val[0] }
+    | hangi_clause       { result = val[0] }
+    | shitsumon_clause   { result = val[0] }
+    | gi_adv_clause      { result = val[0] }
     | neg_clause         { result = val[0] }   # 否定（フェーズ1）
     | prohibit_clause    { result = val[0] }   # 禁止（フェーズ1）
     | verb_phrase        { result = val[0] }
@@ -84,7 +91,7 @@ rule
 # 抑揚句法（況〜乎）   
 # 死馬且買之、況生者乎　→ AすらかつB、いわんやCをや
   suppress_clause
-    : verb_phrase IWA_N_YA     verb_phrase { result = "#{val[0]}況#{val[2]}乎" }
+    : verb_phrase IWA_N_YA verb_phrase SHI_KO { result = "#{val[0]}況#{val[2]}乎" }
 
 # 仮定法・前置型（若/如/苟 ＋ 動詞句）
 # 若不成　→ もし成らずんば
@@ -109,7 +116,33 @@ rule
     : GENTEI_YUI      verb_phrase { result = "惟#{val[1]}" }
     | GENTEI_DOKU     verb_phrase { result = "独#{val[1]}" }
     | GENTEI_DOKU NOUN VERB NOUN  { result = "独#{val[1]}#{val[2]}#{val[3]}" }
+# --- 疑問句法（文末助字） ---
+  shitsumon_clause
+    : verb_phrase SHI_KO          { result = "#{val[0]}乎" }
+    | verb_phrase SHI_JA          { result = "#{val[0]}邪" }
+    | verb_phrase YO_NIMO         { result = "#{val[0]}与" }
+    ;
 
+# --- 反語句法 ---
+  hangi_clause
+    : HAN_AI      verb_phrase SHI_SAI  { result = "豈#{val[1]}哉" }
+    | FUKI_MATA   verb_phrase SHI_KO   { result = "不亦#{val[1]}乎" }
+    | NAMU        verb_phrase SHI_KO   { result = "寧#{val[1]}乎" }
+    | GENTEI_DOKU verb_phrase SHI_KO   { result = "独#{val[1]}乎" }
+    | GENTEI_DOKU verb_phrase SHI_SAI  { result = "独#{val[1]}哉" }
+    ;
+
+# --- 疑問副詞句法 ---
+  gi_adv_clause
+    : GI_AN      VERB        { result = "安#{val[1]}" }
+    | GI_DARE    verb_phrase { result = "誰#{val[1]}" }
+    | GI_IZURE   NOUN VERB   { result = "孰#{val[1]}#{val[2]}" }
+    | GI_NANSURU verb_phrase { result = "何為#{val[1]}" }
+    | GI_NANMOTE verb_phrase { result = "何以#{val[1]}" }
+    | GI_IKANI_A verb_phrase { result = "何如#{val[1]}" }
+    | GI_IKANI_B verb_phrase { result = "如何#{val[1]}" }
+    | GI_NANI    verb_phrase { result = "何#{val[1]}" }
+    ;
   end
 
 ---- header
@@ -117,8 +150,8 @@ require 'strscan'
 
 ---- inner
 
-VERBS = %w[学 読 書 見 聞 知 行 来 食 飲 思 言 得 去 入 出 為 陥 慎 争 賢 有 笑
-           植 買 戚 易 施 成 還 去 帰 習 敏] 
+VERBS = %w[学 読 書 見 聞 知 行 来 食 飲 思 言 得 入 出 為 陥 慎 争 賢 有 笑
+           植 買 戚 易 施 成 還 去 帰 習 敏 説 在 好]
 NOUNS = %w[人 君 臣 子 民 文 道 国 師 天 地 王 士 物 事 土 寒 言 計 馬 船]
 
 
@@ -137,6 +170,12 @@ def tokenize(str)
   scanner = StringScanner.new(str)
   until scanner.eos?
     case
+# --- 複合トークン（単漢字より必ず前） ---
+      when scanner.scan(/不亦/) then tokens << [:FUKI_MATA,  '不亦']
+      when scanner.scan(/何為/) then tokens << [:GI_NANSURU, '何為']
+      when scanner.scan(/何以/) then tokens << [:GI_NANMOTE, '何以']
+      when scanner.scan(/何如/) then tokens << [:GI_IKANI_A, '何如']
+      when scanner.scan(/如何/) then tokens << [:GI_IKANI_B, '如何']
       when scanner.scan(/莫如/) then tokens << [:MOKU_NAKU,  '莫如']
       when scanner.scan(/莫若/) then tokens << [:MOKU_SHIKA, '莫若']
       when scanner.scan(/不若/) then tokens << [:FUSHIKA,    '不若']
@@ -162,6 +201,14 @@ def tokenize(str)
       # 限定
       when scanner.scan(/惟/)   then tokens << [:GENTEI_YUI,    '惟']
       when scanner.scan(/独/)   then tokens << [:GENTEI_DOKU,   '独']
+      when scanner.scan(/豈/)   then tokens << [:HAN_AI,    '豈']
+      when scanner.scan(/安/)   then tokens << [:GI_AN,     '安']
+      when scanner.scan(/誰/)   then tokens << [:GI_DARE,   '誰']
+      when scanner.scan(/孰/)   then tokens << [:GI_IZURE,  '孰']
+      when scanner.scan(/何/)   then tokens << [:GI_NANI,   '何']
+      when scanner.scan(/乎/)   then tokens << [:SHI_KO,    '乎']
+      when scanner.scan(/哉/)   then tokens << [:SHI_SAI,   '哉']
+      when scanner.scan(/邪/)   then tokens << [:SHI_JA,    '邪']
       when scanner.scan(Regexp.new("[#{VERBS.join}]")) then tokens << [:VERB, scanner.matched]
       when scanner.scan(Regexp.new("[#{NOUNS.join}]")) then tokens << [:NOUN, scanner.matched]
     else scanner.getch
@@ -202,6 +249,22 @@ if __FILE__ == $0
     ["学雖無成",   "学雖無成"],
     ["惟士",       "惟士"],
     ["独臣有船",   "独臣有船"],
+    # Phase 3b：疑問
+    ["学乎",       "学乎"],
+    ["学邪",       "学邪"],
+    # Phase 3b：反語
+    ["豈学哉",     "豈学哉"],
+    ["不亦説乎",   "不亦説乎"],
+    ["寧有乎",     "寧有乎"],
+    ["独学乎",     "独学乎"],
+    # Phase 3b：疑問副詞
+    ["安在",       "安在"],
+    ["何為行",     "何為行"],
+    ["何以知",     "何以知"],
+    ["如何行",     "如何行"],
+    ["孰臣賢",     "孰臣賢"],
+    # 回帰確認
+    ["馬況人乎",   "馬況人乎"],
   ]
 
   tests.each do |input, expected|
