@@ -12,6 +12,7 @@ class KanbunTranslatorService
     :kakikudashi,  # 書き下し文
     :skeleton,     # SkeletonBuilder出力（デバッグ用）
     :fallback,     # true = BNFパース失敗でLLM全文委譲
+    :parse_error,  # nil = 訓点付与に成功 / 文字列 = Raccパーサーが解析できなかった理由
     keyword_init: true
   )
 
@@ -45,7 +46,8 @@ class KanbunTranslatorService
       kunten:      kunten_result[:kunten],
       kakikudashi: kunten_result[:kakikudashi],
       skeleton:    skeleton,
-      fallback:    fallback
+      fallback:    fallback,
+      parse_error: kunten_result[:error]
     )
   end
 
@@ -111,4 +113,3 @@ class KanbunTranslatorService
     JSON.parse(response.body)["response"].strip
   end
 end
-
