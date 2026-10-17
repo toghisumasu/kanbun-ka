@@ -14,7 +14,7 @@ token NEG_BU NEG_FU NEG_HI NEG_MU NEG_BAKU
       HAN_AI FUKI_MATA
       GI_AN GI_DARE GI_IZURE GI_NANI
       GI_NANSURU GI_NANMOTE GI_IKANI_A GI_IKANI_B
-      VERB NOUN
+      VERB NOUN ADJ
 
 rule
   sentence
@@ -26,7 +26,7 @@ rule
     | compare_clause     { result = val[0] }
     | select_clause      { result = val[0] }
     | suppress_clause    { result = val[0] }
-    | katen_clause       { result = val[0] } 
+    | katen_clause       { result = val[0] }
     | gyaku_katen_clause { result = val[0] }
     | gentei_clause      { result = val[0] }
     | hangi_clause       { result = val[0] }
@@ -73,6 +73,7 @@ rule
     | VERB VERB       { result = "#{val[0]}#{val[1]}" }
     | NOUN            { result = val[0] }
     | NOUN NOUN       { result = "#{val[0]}#{val[1]}" }
+    | ADJ             { result = val[0] }   # 形容詞（Phase 4a。述語の扱いは 4b で見直す）
 
 # 比較句法（莫如・莫若・不若・不如）
 # 百年之計莫如植樹　→ 百年の計は樹を植えるに如くは莫し
@@ -88,7 +89,7 @@ rule
     : YO_NIMO verb_phrase NAMU   verb_phrase { result = "与#{val[1]}寧#{val[3]}" }
     | NAMU    verb_phrase NEG_MU verb_phrase { result = "寧#{val[1]}無#{val[3]}" }
 
-# 抑揚句法（況〜乎）   
+# 抑揚句法（況〜乎）
 # 死馬且買之、況生者乎　→ AすらかつB、いわんやCをや
   suppress_clause
     : verb_phrase IWA_N_YA verb_phrase SHI_KO { result = "#{val[0]}況#{val[2]}乎" }
@@ -147,13 +148,16 @@ rule
 
 ---- header
 require 'strscan'
+require_relative 'lexicon'
 
 ---- inner
 
-VERBS = %w[学 読 書 見 聞 知 行 来 食 飲 思 言 得 入 出 為 陥 慎 争 賢 有 笑
-           植 買 戚 易 施 成 還 去 帰 習 敏 説 在 好]
-NOUNS = %w[人 君 臣 子 民 文 道 国 師 天 地 王 士 物 事 土 寒 言 計 馬 船]
+# 辞書は lib/kanbun/lexicon.rb に集約（Phase 4a）。旧定数は互換のため残す。
+VERBS = Kanbun::Lexicon::VERBS
+NOUNS = Kanbun::Lexicon::NOUNS
 
+# 辞書にない文字（読み飛ばした文字）。Phase 4 以降の診断用。
+attr_reader :skipped
 
 def parse(str)
   @tokens = tokenize(str)
@@ -165,53 +169,19 @@ def next_token
   @tokens[@pos].tap { @pos += 1 }
 end
 
+# 最長一致トークン化。辞書の表層形を長い順に試すため、
+# 「深林」は 1 語、「不亦」は NEG_BU+亦 ではなく FUKI_MATA になる。
 def tokenize(str)
   tokens = []
+  @skipped = []
   scanner = StringScanner.new(str)
   until scanner.eos?
-    case
-# --- 複合トークン（単漢字より必ず前） ---
-      when scanner.scan(/不亦/) then tokens << [:FUKI_MATA,  '不亦']
-      when scanner.scan(/何為/) then tokens << [:GI_NANSURU, '何為']
-      when scanner.scan(/何以/) then tokens << [:GI_NANMOTE, '何以']
-      when scanner.scan(/何如/) then tokens << [:GI_IKANI_A, '何如']
-      when scanner.scan(/如何/) then tokens << [:GI_IKANI_B, '如何']
-      when scanner.scan(/莫如/) then tokens << [:MOKU_NAKU,  '莫如']
-      when scanner.scan(/莫若/) then tokens << [:MOKU_SHIKA, '莫若']
-      when scanner.scan(/不若/) then tokens << [:FUSHIKA,    '不若']
-      when scanner.scan(/不如/) then tokens << [:FUNYUU,     '不如']
-      when scanner.scan(/与/)   then tokens << [:YO_NIMO,    '与']
-      when scanner.scan(/寧/)   then tokens << [:NAMU,       '寧']
-      when scanner.scan(/況/)   then tokens << [:IWA_N_YA,  '況']
-      when scanner.scan(/不/)   then tokens << [:NEG_BU,     '不']
-      when scanner.scan(/弗/)   then tokens << [:NEG_FU,        '弗']
-      when scanner.scan(/非/)   then tokens << [:NEG_HI,        '非']
-      when scanner.scan(/無/)   then tokens << [:NEG_MU,        '無']
-      when scanner.scan(/莫/)   then tokens << [:NEG_BAKU,      '莫']
-      when scanner.scan(/勿/)   then tokens << [:PROHIBIT_NAKA, '勿']
-      when scanner.scan(/必/)   then tokens << [:HITSZU,        '必']
-      when scanner.scan(/常/)   then tokens << [:JOU,           '常']
-      when scanner.scan(/復/)   then tokens << [:MATA,          '復']
-      # 仮定
-      when scanner.scan(/若/)   then tokens << [:KATEN_SHIKA,   '若']
-      when scanner.scan(/如/)   then tokens << [:KATEN_NYO,     '如']
-      when scanner.scan(/苟/)   then tokens << [:KATEN_IYA,     '苟']
-      when scanner.scan(/雖/)   then tokens << [:KATEN_IEDOMO,  '雖']
-      when scanner.scan(/縦/)   then tokens << [:KATEN_TATOI,   '縦']
-      # 限定
-      when scanner.scan(/惟/)   then tokens << [:GENTEI_YUI,    '惟']
-      when scanner.scan(/独/)   then tokens << [:GENTEI_DOKU,   '独']
-      when scanner.scan(/豈/)   then tokens << [:HAN_AI,    '豈']
-      when scanner.scan(/安/)   then tokens << [:GI_AN,     '安']
-      when scanner.scan(/誰/)   then tokens << [:GI_DARE,   '誰']
-      when scanner.scan(/孰/)   then tokens << [:GI_IZURE,  '孰']
-      when scanner.scan(/何/)   then tokens << [:GI_NANI,   '何']
-      when scanner.scan(/乎/)   then tokens << [:SHI_KO,    '乎']
-      when scanner.scan(/哉/)   then tokens << [:SHI_SAI,   '哉']
-      when scanner.scan(/邪/)   then tokens << [:SHI_JA,    '邪']
-      when scanner.scan(Regexp.new("[#{VERBS.join}]")) then tokens << [:VERB, scanner.matched]
-      when scanner.scan(Regexp.new("[#{NOUNS.join}]")) then tokens << [:NOUN, scanner.matched]
-    else scanner.getch
+    if (word = scanner.scan(Kanbun::Lexicon::PATTERN))
+      tokens << [Kanbun::Lexicon::TABLE.fetch(word), word]
+    elsif scanner.scan(Kanbun::Lexicon::PUNCTUATION)
+      next
+    else
+      @skipped << scanner.getch
     end
   end
   tokens << [false, nil]
@@ -241,7 +211,7 @@ if __FILE__ == $0
     ["地不若人",   "地不若人"],
     ["与易寧戚",   "与易寧戚"],
     ["寧為無為",   "寧為無為"],
-    ["馬況人乎",   "馬況人乎"], 
+    ["馬況人乎",   "馬況人乎"],
     # フェーズ3a
     ["若不成",     "若不成"],
     ["如不成",     "如不成"],
