@@ -33,12 +33,12 @@ RSpec.describe KanbunParserService do
 
   describe "解析できない白文" do
     it "辞書にない字を含むときは白文をそのまま返し、理由を添える" do
-      result = described_class.call("我食林檎")
+      result = described_class.call("我食蜜柑")
       expect(result[:status]).to eq :unparsed
-      expect(result[:kunten]).to eq "我食林檎"
-      expect(result[:kakikudashi]).to eq "我食林檎"
+      expect(result[:kunten]).to eq "我食蜜柑"
+      expect(result[:kakikudashi]).to eq "我食蜜柑"
       expect(result[:error]).to include("UnknownCharacters")
-      expect(result[:error]).to include("林檎")
+      expect(result[:error]).to include("蜜柑")
     end
 
     it "文法外の語順のときも例外にしない" do
