@@ -15,7 +15,7 @@ token NEG_BU NEG_FU NEG_HI NEG_MU NEG_BAKU
       HAN_AI FUKI_MATA
       GI_AN GI_DARE GI_IZURE GI_NANI
       GI_NANSURU GI_NANMOTE GI_IKANI_A GI_IKANI_B
-      VERB NOUN ADJ
+      VERB VERB_I NOUN ADJ PREP
 
 rule
   sentence
@@ -67,14 +67,37 @@ rule
   prohibit_clause
     : PROHIBIT_NAKA verb_phrase { result = "勿#{val[1]}" }
 
-  # ---- 動詞句（多義字：VERB+VERB も許容）----
+  # ---- 動詞句 = 基本構文 5 文型（Phase 4b。HB p.150）----
+  # 返り点は語順（構文）で決まり、ヲ／ニの別は辞書（動詞の格情報）で決まる。
+  # そのため ②読漢文(ヲ)と③入深林(ニ)、④揚名後世と⑤教籍兵法 は同じ形の規則で受ける。
   verb_phrase
-    : VERB            { result = val[0] }
-    | VERB NOUN       { result = "#{val[0]}#{val[1]}" }
-    | VERB VERB       { result = "#{val[0]}#{val[1]}" }
-    | NOUN            { result = val[0] }
-    | NOUN NOUN       { result = "#{val[0]}#{val[1]}" }
-    | ADJ             { result = val[0] }   # 形容詞（Phase 4a。述語の扱いは 4b で見直す）
+    : pred_tr                  { result = val[0] }   # 述語のみ（他動・多義の VERB）
+    | pred_in                  { result = val[0] }   # 述語のみ（自動詞・形容詞）
+    | NOUN                     { result = val[0] }   # 名詞だけ
+    | NOUN NOUN                { result = val.join } # ① 孔子聖人（名詞述語）
+    | NOUN pred_tr             { result = val.join } # ②〜⑤ 我読漢文・返景入深林…
+    | sv                       { result = val[0] }   # ① 山紫・花開
+    | sv sv                    { result = val.join } # ① 花開鳥啼・山紫水明（対句）
+
+  # 主語＋自動詞／形容詞。自動詞（VERB_I）で切るので 花開|鳥啼 が 花 開鳥 と誤読されない。
+  sv
+    : NOUN pred_in             { result = val.join }
+
+  # 他動・多義の述語：目的語（②④⑤）・補語（③）・置字つき補語
+  pred_tr
+    : VERB                     { result = val[0] }
+    | VERB NOUN                { result = val.join } # ② 読漢文 / ③ 入深林
+    | VERB VERB                { result = val.join } # 従来どおり
+    | VERB NOUN NOUN           { result = val.join } # ④ 揚名後世 / ⑤ 教籍兵法
+    | VERB PREP NOUN           { result = val.join } # ③ 置字つき補語
+    | VERB NOUN PREP NOUN      { result = val.join } # ④ 問礼於老子
+
+  # 自動詞・形容詞の述語：補語（比較ヨリ・場所ニ）は置字で受ける
+  pred_in
+    : VERB_I                   { result = val[0] }
+    | ADJ                      { result = val[0] }
+    | VERB_I PREP NOUN         { result = val.join }
+    | ADJ PREP NOUN            { result = val.join } # ③ 猛於虎・紅於二月花
 
 # 比較句法（莫如・莫若・不若・不如）
 # 百年之計莫如植樹　→ 百年の計は樹を植えるに如くは莫し
@@ -117,7 +140,6 @@ rule
   gentei_clause
     : GENTEI_YUI      verb_phrase { result = "惟#{val[1]}" }
     | GENTEI_DOKU     verb_phrase { result = "独#{val[1]}" }
-    | GENTEI_DOKU NOUN VERB NOUN  { result = "独#{val[1]}#{val[2]}#{val[3]}" }
 # --- 疑問句法（文末助字） ---
   shitsumon_clause
     : verb_phrase SHI_KO          { result = "#{val[0]}乎" }
@@ -178,7 +200,7 @@ def tokenize(str)
   scanner = StringScanner.new(str)
   until scanner.eos?
     if (word = scanner.scan(Kanbun::Lexicon::PATTERN))
-      tokens << [Kanbun::Lexicon::TABLE.fetch(word), word]
+      tokens << [Kanbun::Lexicon.token_for(word, scanner), word]
     elsif scanner.scan(Kanbun::Lexicon::PUNCTUATION)
       next
     else

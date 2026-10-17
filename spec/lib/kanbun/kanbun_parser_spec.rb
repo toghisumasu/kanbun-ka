@@ -96,4 +96,53 @@ RSpec.describe KanbunParser do
       expect(parser.skipped).to be_empty
     end
   end
+
+  # ---- Phase 4b: 基本構文 5 文型と置字（HB p.150） ----
+  cases "Phase 4b: ① 主語＋述語", [
+    %w[花開鳥啼 花開鳥啼], %w[山紫水明 山紫水明], %w[孔子聖人 孔子聖人]
+  ]
+
+  cases "Phase 4b: ② 主語＋述語＋目的語", [
+    %w[我読漢文 我読漢文], %w[君子学道 君子学道]
+  ]
+
+  cases "Phase 4b: ③ 主語＋述語＋(於・于・乎)＋補語", [
+    %w[返景入深林 返景入深林], %w[苛政猛於虎 苛政猛於虎],
+    %w[霜葉紅於二月花 霜葉紅於二月花], %w[入乎深林 入乎深林], %w[花開于山 花開于山]
+  ]
+
+  cases "Phase 4b: ④ 目的語＋補語 / ⑤ 補語＋目的語", [
+    %w[君子揚名後世 君子揚名後世], %w[子問礼於老子 子問礼於老子],
+    %w[項梁教籍兵法 項梁教籍兵法], %w[陽貨帰孔子豚 陽貨帰孔子豚]
+  ]
+
+  cases "Phase 4b: 句法の中に 5 文型が入る", [
+    %w[不入深林 不入深林], %w[豈学道哉 豈学道哉], %w[何為入深林 何為入深林],
+    %w[独君子有船 独君子有船], %w[若不入深林 若不入深林]
+  ]
+
+  describe "Phase 4b: 置字 乎 の先読み" do
+    def tokens_of(str) = parser.send(:tokenize, str)
+
+    it "乎 + 名詞 は置字 PREP" do
+      expect(tokens_of("入乎深林")[1]).to eq [:PREP, "乎"]
+    end
+
+    it "文末の 乎 は疑問の SHI_KO" do
+      expect(tokens_of("学乎")[1]).to eq [:SHI_KO, "乎"]
+    end
+
+    it "乎 + 哉 など助字が続くときは SHI_KO のまま" do
+      expect(tokens_of("学乎哉")[1]).to eq [:SHI_KO, "乎"]
+    end
+
+    it "於 于 は常に PREP" do
+      expect(tokens_of("入於山")[1]).to eq [:PREP, "於"]
+      expect(tokens_of("入于山")[1]).to eq [:PREP, "于"]
+    end
+
+    it "自動詞のあとに名詞が続く 花開鳥 は文法上受理しない（開は自動詞）" do
+      expect { parser.parse("花開鳥") }.to raise_error(Racc::ParseError)
+    end
+  end
 end
