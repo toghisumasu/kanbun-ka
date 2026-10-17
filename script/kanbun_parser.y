@@ -1,3 +1,4 @@
+# 生成: bundle exec racc -v script/kanbun_parser.y -o lib/kanbun/kanbun_parser.tab.rb
 class KanbunParser
 
 # トークン定義（フェーズ1 + 部分否定用トークンを追加）

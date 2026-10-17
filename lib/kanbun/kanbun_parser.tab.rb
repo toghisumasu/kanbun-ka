@@ -11,7 +11,7 @@ require_relative 'lexicon'
 
 class KanbunParser < Racc::Parser
 
-module_eval(<<'...end kanbun_parser.y/module_eval...', 'kanbun_parser.y', 154)
+module_eval(<<'...end kanbun_parser.y/module_eval...', 'kanbun_parser.y', 155)
 
 # 辞書は lib/kanbun/lexicon.rb に集約（Phase 4a）。旧定数は互換のため残す。
 VERBS = Kanbun::Lexicon::VERBS
@@ -364,476 +364,476 @@ Racc_debug_parser = false
 
 # reduce 0 omitted
 
-module_eval(<<'.,.,', 'kanbun_parser.y', 20)
+module_eval(<<'.,.,', 'kanbun_parser.y', 21)
   def _reduce_1(val, _values, result)
      result = val[0]
     result
   end
 .,.,
 
-module_eval(<<'.,.,', 'kanbun_parser.y', 23)
+module_eval(<<'.,.,', 'kanbun_parser.y', 24)
   def _reduce_2(val, _values, result)
      result = val[0]
     result
   end
 .,.,
 
-module_eval(<<'.,.,', 'kanbun_parser.y', 24)
+module_eval(<<'.,.,', 'kanbun_parser.y', 25)
   def _reduce_3(val, _values, result)
      result = val[0]
     result
   end
 .,.,
 
-module_eval(<<'.,.,', 'kanbun_parser.y', 25)
+module_eval(<<'.,.,', 'kanbun_parser.y', 26)
   def _reduce_4(val, _values, result)
      result = val[0]
     result
   end
 .,.,
 
-module_eval(<<'.,.,', 'kanbun_parser.y', 26)
+module_eval(<<'.,.,', 'kanbun_parser.y', 27)
   def _reduce_5(val, _values, result)
      result = val[0]
     result
   end
 .,.,
 
-module_eval(<<'.,.,', 'kanbun_parser.y', 27)
+module_eval(<<'.,.,', 'kanbun_parser.y', 28)
   def _reduce_6(val, _values, result)
      result = val[0]
     result
   end
 .,.,
 
-module_eval(<<'.,.,', 'kanbun_parser.y', 28)
+module_eval(<<'.,.,', 'kanbun_parser.y', 29)
   def _reduce_7(val, _values, result)
      result = val[0]
     result
   end
 .,.,
 
-module_eval(<<'.,.,', 'kanbun_parser.y', 29)
+module_eval(<<'.,.,', 'kanbun_parser.y', 30)
   def _reduce_8(val, _values, result)
      result = val[0]
     result
   end
 .,.,
 
-module_eval(<<'.,.,', 'kanbun_parser.y', 30)
+module_eval(<<'.,.,', 'kanbun_parser.y', 31)
   def _reduce_9(val, _values, result)
      result = val[0]
     result
   end
 .,.,
 
-module_eval(<<'.,.,', 'kanbun_parser.y', 31)
+module_eval(<<'.,.,', 'kanbun_parser.y', 32)
   def _reduce_10(val, _values, result)
      result = val[0]
     result
   end
 .,.,
 
-module_eval(<<'.,.,', 'kanbun_parser.y', 32)
+module_eval(<<'.,.,', 'kanbun_parser.y', 33)
   def _reduce_11(val, _values, result)
      result = val[0]
     result
   end
 .,.,
 
-module_eval(<<'.,.,', 'kanbun_parser.y', 33)
+module_eval(<<'.,.,', 'kanbun_parser.y', 34)
   def _reduce_12(val, _values, result)
      result = val[0]
     result
   end
 .,.,
 
-module_eval(<<'.,.,', 'kanbun_parser.y', 34)
+module_eval(<<'.,.,', 'kanbun_parser.y', 35)
   def _reduce_13(val, _values, result)
      result = val[0]
     result
   end
 .,.,
 
-module_eval(<<'.,.,', 'kanbun_parser.y', 35)
+module_eval(<<'.,.,', 'kanbun_parser.y', 36)
   def _reduce_14(val, _values, result)
      result = val[0]
     result
   end
 .,.,
 
-module_eval(<<'.,.,', 'kanbun_parser.y', 36)
+module_eval(<<'.,.,', 'kanbun_parser.y', 37)
   def _reduce_15(val, _values, result)
      result = val[0]
     result
   end
 .,.,
 
-module_eval(<<'.,.,', 'kanbun_parser.y', 43)
+module_eval(<<'.,.,', 'kanbun_parser.y', 44)
   def _reduce_16(val, _values, result)
      result = "無非#{val[2]}"
     result
   end
 .,.,
 
-module_eval(<<'.,.,', 'kanbun_parser.y', 44)
+module_eval(<<'.,.,', 'kanbun_parser.y', 45)
   def _reduce_17(val, _values, result)
      result = "無不#{val[2]}"
     result
   end
 .,.,
 
-module_eval(<<'.,.,', 'kanbun_parser.y', 45)
+module_eval(<<'.,.,', 'kanbun_parser.y', 46)
   def _reduce_18(val, _values, result)
      result = "非不#{val[2]}"
     result
   end
 .,.,
 
-module_eval(<<'.,.,', 'kanbun_parser.y', 52)
+module_eval(<<'.,.,', 'kanbun_parser.y', 53)
   def _reduce_19(val, _values, result)
      result = "不必#{val[2]}"
     result
   end
 .,.,
 
-module_eval(<<'.,.,', 'kanbun_parser.y', 53)
+module_eval(<<'.,.,', 'kanbun_parser.y', 54)
   def _reduce_20(val, _values, result)
      result = "不常#{val[2]}"
     result
   end
 .,.,
 
-module_eval(<<'.,.,', 'kanbun_parser.y', 54)
+module_eval(<<'.,.,', 'kanbun_parser.y', 55)
   def _reduce_21(val, _values, result)
      result = "不復#{val[2]}"
     result
   end
 .,.,
 
-module_eval(<<'.,.,', 'kanbun_parser.y', 58)
+module_eval(<<'.,.,', 'kanbun_parser.y', 59)
   def _reduce_22(val, _values, result)
      result = "不#{val[1]}"
     result
   end
 .,.,
 
-module_eval(<<'.,.,', 'kanbun_parser.y', 59)
+module_eval(<<'.,.,', 'kanbun_parser.y', 60)
   def _reduce_23(val, _values, result)
      result = "弗#{val[1]}"
     result
   end
 .,.,
 
-module_eval(<<'.,.,', 'kanbun_parser.y', 60)
+module_eval(<<'.,.,', 'kanbun_parser.y', 61)
   def _reduce_24(val, _values, result)
      result = "非#{val[1]}"
     result
   end
 .,.,
 
-module_eval(<<'.,.,', 'kanbun_parser.y', 61)
+module_eval(<<'.,.,', 'kanbun_parser.y', 62)
   def _reduce_25(val, _values, result)
      result = "無#{val[1]}"
     result
   end
 .,.,
 
-module_eval(<<'.,.,', 'kanbun_parser.y', 62)
+module_eval(<<'.,.,', 'kanbun_parser.y', 63)
   def _reduce_26(val, _values, result)
      result = "莫#{val[1]}"
     result
   end
 .,.,
 
-module_eval(<<'.,.,', 'kanbun_parser.y', 66)
+module_eval(<<'.,.,', 'kanbun_parser.y', 67)
   def _reduce_27(val, _values, result)
      result = "勿#{val[1]}"
     result
   end
 .,.,
 
-module_eval(<<'.,.,', 'kanbun_parser.y', 70)
+module_eval(<<'.,.,', 'kanbun_parser.y', 71)
   def _reduce_28(val, _values, result)
      result = val[0]
     result
   end
 .,.,
 
-module_eval(<<'.,.,', 'kanbun_parser.y', 71)
+module_eval(<<'.,.,', 'kanbun_parser.y', 72)
   def _reduce_29(val, _values, result)
      result = "#{val[0]}#{val[1]}"
     result
   end
 .,.,
 
-module_eval(<<'.,.,', 'kanbun_parser.y', 72)
+module_eval(<<'.,.,', 'kanbun_parser.y', 73)
   def _reduce_30(val, _values, result)
      result = "#{val[0]}#{val[1]}"
     result
   end
 .,.,
 
-module_eval(<<'.,.,', 'kanbun_parser.y', 73)
+module_eval(<<'.,.,', 'kanbun_parser.y', 74)
   def _reduce_31(val, _values, result)
      result = val[0]
     result
   end
 .,.,
 
-module_eval(<<'.,.,', 'kanbun_parser.y', 74)
+module_eval(<<'.,.,', 'kanbun_parser.y', 75)
   def _reduce_32(val, _values, result)
      result = "#{val[0]}#{val[1]}"
     result
   end
 .,.,
 
-module_eval(<<'.,.,', 'kanbun_parser.y', 75)
+module_eval(<<'.,.,', 'kanbun_parser.y', 76)
   def _reduce_33(val, _values, result)
      result = val[0]
     result
   end
 .,.,
 
-module_eval(<<'.,.,', 'kanbun_parser.y', 80)
+module_eval(<<'.,.,', 'kanbun_parser.y', 81)
   def _reduce_34(val, _values, result)
      result = "#{val[0]}莫如#{val[2]}"
     result
   end
 .,.,
 
-module_eval(<<'.,.,', 'kanbun_parser.y', 81)
+module_eval(<<'.,.,', 'kanbun_parser.y', 82)
   def _reduce_35(val, _values, result)
      result = "#{val[0]}莫若#{val[2]}"
     result
   end
 .,.,
 
-module_eval(<<'.,.,', 'kanbun_parser.y', 82)
+module_eval(<<'.,.,', 'kanbun_parser.y', 83)
   def _reduce_36(val, _values, result)
      result = "#{val[0]}不若#{val[2]}"
     result
   end
 .,.,
 
-module_eval(<<'.,.,', 'kanbun_parser.y', 83)
+module_eval(<<'.,.,', 'kanbun_parser.y', 84)
   def _reduce_37(val, _values, result)
      result = "#{val[0]}不如#{val[2]}"
     result
   end
 .,.,
 
-module_eval(<<'.,.,', 'kanbun_parser.y', 88)
+module_eval(<<'.,.,', 'kanbun_parser.y', 89)
   def _reduce_38(val, _values, result)
      result = "与#{val[1]}寧#{val[3]}"
     result
   end
 .,.,
 
-module_eval(<<'.,.,', 'kanbun_parser.y', 89)
+module_eval(<<'.,.,', 'kanbun_parser.y', 90)
   def _reduce_39(val, _values, result)
      result = "寧#{val[1]}無#{val[3]}"
     result
   end
 .,.,
 
-module_eval(<<'.,.,', 'kanbun_parser.y', 94)
+module_eval(<<'.,.,', 'kanbun_parser.y', 95)
   def _reduce_40(val, _values, result)
      result = "#{val[0]}況#{val[2]}乎"
     result
   end
 .,.,
 
-module_eval(<<'.,.,', 'kanbun_parser.y', 99)
+module_eval(<<'.,.,', 'kanbun_parser.y', 100)
   def _reduce_41(val, _values, result)
      result = "若#{val[1]}"
     result
   end
 .,.,
 
-module_eval(<<'.,.,', 'kanbun_parser.y', 100)
+module_eval(<<'.,.,', 'kanbun_parser.y', 101)
   def _reduce_42(val, _values, result)
      result = "若不#{val[2]}"
     result
   end
 .,.,
 
-module_eval(<<'.,.,', 'kanbun_parser.y', 101)
+module_eval(<<'.,.,', 'kanbun_parser.y', 102)
   def _reduce_43(val, _values, result)
      result = "如#{val[1]}"
     result
   end
 .,.,
 
-module_eval(<<'.,.,', 'kanbun_parser.y', 102)
+module_eval(<<'.,.,', 'kanbun_parser.y', 103)
   def _reduce_44(val, _values, result)
      result = "如不#{val[2]}"
     result
   end
 .,.,
 
-module_eval(<<'.,.,', 'kanbun_parser.y', 103)
+module_eval(<<'.,.,', 'kanbun_parser.y', 104)
   def _reduce_45(val, _values, result)
      result = "苟#{val[1]}"
     result
   end
 .,.,
 
-module_eval(<<'.,.,', 'kanbun_parser.y', 104)
+module_eval(<<'.,.,', 'kanbun_parser.y', 105)
   def _reduce_46(val, _values, result)
      result = "苟無#{val[2]}"
     result
   end
 .,.,
 
-module_eval(<<'.,.,', 'kanbun_parser.y', 109)
+module_eval(<<'.,.,', 'kanbun_parser.y', 110)
   def _reduce_47(val, _values, result)
      result = "#{val[0]}雖#{val[2]}"
     result
   end
 .,.,
 
-module_eval(<<'.,.,', 'kanbun_parser.y', 110)
+module_eval(<<'.,.,', 'kanbun_parser.y', 111)
   def _reduce_48(val, _values, result)
      result = "#{val[0]}雖無#{val[3]}"
     result
   end
 .,.,
 
-module_eval(<<'.,.,', 'kanbun_parser.y', 111)
+module_eval(<<'.,.,', 'kanbun_parser.y', 112)
   def _reduce_49(val, _values, result)
      result = "#{val[0]}縦#{val[2]}"
     result
   end
 .,.,
 
-module_eval(<<'.,.,', 'kanbun_parser.y', 116)
+module_eval(<<'.,.,', 'kanbun_parser.y', 117)
   def _reduce_50(val, _values, result)
      result = "惟#{val[1]}"
     result
   end
 .,.,
 
-module_eval(<<'.,.,', 'kanbun_parser.y', 117)
+module_eval(<<'.,.,', 'kanbun_parser.y', 118)
   def _reduce_51(val, _values, result)
      result = "独#{val[1]}"
     result
   end
 .,.,
 
-module_eval(<<'.,.,', 'kanbun_parser.y', 118)
+module_eval(<<'.,.,', 'kanbun_parser.y', 119)
   def _reduce_52(val, _values, result)
      result = "独#{val[1]}#{val[2]}#{val[3]}"
     result
   end
 .,.,
 
-module_eval(<<'.,.,', 'kanbun_parser.y', 121)
+module_eval(<<'.,.,', 'kanbun_parser.y', 122)
   def _reduce_53(val, _values, result)
      result = "#{val[0]}乎"
     result
   end
 .,.,
 
-module_eval(<<'.,.,', 'kanbun_parser.y', 122)
+module_eval(<<'.,.,', 'kanbun_parser.y', 123)
   def _reduce_54(val, _values, result)
      result = "#{val[0]}邪"
     result
   end
 .,.,
 
-module_eval(<<'.,.,', 'kanbun_parser.y', 123)
+module_eval(<<'.,.,', 'kanbun_parser.y', 124)
   def _reduce_55(val, _values, result)
      result = "#{val[0]}与"
     result
   end
 .,.,
 
-module_eval(<<'.,.,', 'kanbun_parser.y', 128)
+module_eval(<<'.,.,', 'kanbun_parser.y', 129)
   def _reduce_56(val, _values, result)
      result = "豈#{val[1]}哉"
     result
   end
 .,.,
 
-module_eval(<<'.,.,', 'kanbun_parser.y', 129)
+module_eval(<<'.,.,', 'kanbun_parser.y', 130)
   def _reduce_57(val, _values, result)
      result = "不亦#{val[1]}乎"
     result
   end
 .,.,
 
-module_eval(<<'.,.,', 'kanbun_parser.y', 130)
+module_eval(<<'.,.,', 'kanbun_parser.y', 131)
   def _reduce_58(val, _values, result)
      result = "寧#{val[1]}乎"
     result
   end
 .,.,
 
-module_eval(<<'.,.,', 'kanbun_parser.y', 131)
+module_eval(<<'.,.,', 'kanbun_parser.y', 132)
   def _reduce_59(val, _values, result)
      result = "独#{val[1]}乎"
     result
   end
 .,.,
 
-module_eval(<<'.,.,', 'kanbun_parser.y', 132)
+module_eval(<<'.,.,', 'kanbun_parser.y', 133)
   def _reduce_60(val, _values, result)
      result = "独#{val[1]}哉"
     result
   end
 .,.,
 
-module_eval(<<'.,.,', 'kanbun_parser.y', 137)
+module_eval(<<'.,.,', 'kanbun_parser.y', 138)
   def _reduce_61(val, _values, result)
      result = "安#{val[1]}"
     result
   end
 .,.,
 
-module_eval(<<'.,.,', 'kanbun_parser.y', 138)
+module_eval(<<'.,.,', 'kanbun_parser.y', 139)
   def _reduce_62(val, _values, result)
      result = "誰#{val[1]}"
     result
   end
 .,.,
 
-module_eval(<<'.,.,', 'kanbun_parser.y', 139)
+module_eval(<<'.,.,', 'kanbun_parser.y', 140)
   def _reduce_63(val, _values, result)
      result = "孰#{val[1]}#{val[2]}"
     result
   end
 .,.,
 
-module_eval(<<'.,.,', 'kanbun_parser.y', 140)
+module_eval(<<'.,.,', 'kanbun_parser.y', 141)
   def _reduce_64(val, _values, result)
      result = "何為#{val[1]}"
     result
   end
 .,.,
 
-module_eval(<<'.,.,', 'kanbun_parser.y', 141)
+module_eval(<<'.,.,', 'kanbun_parser.y', 142)
   def _reduce_65(val, _values, result)
      result = "何以#{val[1]}"
     result
   end
 .,.,
 
-module_eval(<<'.,.,', 'kanbun_parser.y', 142)
+module_eval(<<'.,.,', 'kanbun_parser.y', 143)
   def _reduce_66(val, _values, result)
      result = "何如#{val[1]}"
     result
   end
 .,.,
 
-module_eval(<<'.,.,', 'kanbun_parser.y', 143)
+module_eval(<<'.,.,', 'kanbun_parser.y', 144)
   def _reduce_67(val, _values, result)
      result = "如何#{val[1]}"
     result
   end
 .,.,
 
-module_eval(<<'.,.,', 'kanbun_parser.y', 144)
+module_eval(<<'.,.,', 'kanbun_parser.y', 145)
   def _reduce_68(val, _values, result)
      result = "何#{val[1]}"
     result

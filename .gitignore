@@ -35,3 +35,6 @@
 
 .env
 vendor/bundle/
+
+# racc 生成物
+*.output
