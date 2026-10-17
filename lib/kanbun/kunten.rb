@@ -108,7 +108,10 @@ module Kanbun
       case node
       when Tree::Leaf then [node]
       when Tree::Seq then block_reading(node.children)
-      when Tree::Ret then block_reading(node.block) + [node.head]
+      when Tree::Ret
+        # 再読文字は 1 度目をその位置で読み、2 度目に返って読む
+        first = node.head.saidoku? ? [node.head] : []
+        first + block_reading(node.block) + [node.head]
       end
     end
 
@@ -202,16 +205,24 @@ module Kanbun
         chars = leaf.surface.each_char.to_a
         movable = ctx[:head_of].key?(leaf)
         chars.each_with_index.map do |ch, i|
-          unit = Aozora::Unit.new(
-            kanji: ch,
-            yomi: leaf.silent? ? Aozora::Reading.new('', true) : nil,
-            okuri: '', saidoku: nil, saidoku_okuri: '',
-            tate: movable && i < chars.size - 1,
-            kunten: marks[cursor + i]
-          )
-          unit
+          unit_for(leaf, ch, movable && i < chars.size - 1, marks[cursor + i])
         end.tap { cursor += chars.size }
       end
+    end
+
+    def unit_for(leaf, char, tate, kunten)
+      yomi = leaf.silent? ? Aozora::Reading.new('', true) : nil
+      okuri = ''
+      saidoku = nil
+      saidoku_okuri = ''
+      if (r = leaf.saidoku)
+        yomi = Aozora::Reading.new(r[:yomi], false)
+        okuri = r[:okuri]
+        saidoku = Aozora::Reading.new(r[:saidoku], true)
+        saidoku_okuri = r[:saidoku_okuri]
+      end
+      Aozora::Unit.new(kanji: char, yomi: yomi, okuri: okuri, saidoku: saidoku,
+                       saidoku_okuri: saidoku_okuri, tate: tate, kunten: kunten)
     end
 
     # Reorder で読み順に戻し、構文木から期待した読み順と一致するか確かめる。
@@ -248,6 +259,6 @@ module Kanbun
 
     private_class_method :analyze, :walk, :reading_order, :block_reading, :assign_marks, :ren?,
                          :lower_leaf, :chain_levels, :chain_marks, :put,
-                         :build_units, :verify!, :silent?, :aozora_unit, :reading_text
+                         :build_units, :unit_for, :verify!, :silent?, :aozora_unit, :reading_text
   end
 end

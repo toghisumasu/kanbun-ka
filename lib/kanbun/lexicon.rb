@@ -40,15 +40,32 @@ module Kanbun
       '豈' => :HAN_AI, '安' => :GI_AN, '誰' => :GI_DARE, '孰' => :GI_IZURE, '何' => :GI_NANI,
       '乎' => :SHI_KO, '哉' => :SHI_SAI, '邪' => :SHI_JA,
       # 置字（補語マーカー）。乎 は下の token_for で文末助字と区別する
-      '於' => :PREP, '于' => :PREP
+      '於' => :PREP, '于' => :PREP,
+      # 再読文字（Phase 4d）。1 度目はその位置で、2 度目は返って読む。読みは下の SAIDOKU
+      '未' => :SAIDOKU, '将' => :SAIDOKU, '当' => :SAIDOKU, '応' => :SAIDOKU,
+      '宜' => :SAIDOKU, '須' => :SAIDOKU, '猶' => :SAIDOKU, '盍' => :SAIDOKU
+    }.freeze
+
+    # 再読文字の読み（HB p.164）。yomi/okuri が 1 度目、saidoku/saidoku_okuri が 2 度目。
+    # 2 度目の送り仮名は直前の語の活用で変わる（知ラ・ズ／知ル・ベシ…）ので、
+    # ここには基本形だけを置き、活用の接続は Phase 5 の送り仮名辞書で行う。
+    SAIDOKU = {
+      '未' => { yomi: 'いま', okuri: 'ダ', saidoku: 'ず', saidoku_okuri: '' },       # いまダ…ず
+      '将' => { yomi: 'まさ', okuri: 'ニ', saidoku: 'す', saidoku_okuri: '' },       # まさニ…す
+      '当' => { yomi: 'まさ', okuri: 'ニ', saidoku: 'べ', saidoku_okuri: 'シ' },     # まさニ…べし
+      '応' => { yomi: 'まさ', okuri: 'ニ', saidoku: 'べ', saidoku_okuri: 'シ' },     # まさニ…べし
+      '宜' => { yomi: 'よろ', okuri: 'シク', saidoku: 'べ', saidoku_okuri: 'シ' },   # よろシク…べし
+      '須' => { yomi: 'すべか', okuri: 'ラク', saidoku: 'べ', saidoku_okuri: 'シ' }, # すべからく…べし
+      '猶' => { yomi: 'な', okuri: 'ホ', saidoku: 'ゴト', saidoku_okuri: 'シ' },     # なホ…ごとシ
+      '盍' => { yomi: 'なん', okuri: 'ゾ', saidoku: 'ざ', saidoku_okuri: 'ル' }      # なんゾ…ざる
     }.freeze
 
     # 1 字の内容語（従来の VERBS / NOUNS をそのまま移した。回帰を避けるため中身は変えない）
     VERBS = %w[学 読 書 見 聞 知 行 来 食 飲 思 言 得 入 出 為 陥 慎 争 賢 有 笑
                植 買 戚 易 施 成 還 去 帰 習 敏 説 在 好
-               教 問 揚 待 省].freeze
+               教 問 揚 待 省 及].freeze
     NOUNS = %w[人 君 臣 子 民 文 道 国 師 天 地 王 士 物 事 土 寒 言 計 馬 船
-               我 吾 汝 山 水 花 鳥 虎 礼 名 籍 豚 景 霜 備 患].freeze
+               我 吾 汝 山 水 花 鳥 虎 礼 名 籍 豚 景 霜 備 患 過 春].freeze
 
     # 自動詞（Phase 4b）。目的語を取らないので「花開鳥啼」を 花|開|鳥|啼 と切れる。
     # 既存の VERBS は回帰を避けるためそのまま。自動詞への移動は動詞の格情報辞書（Phase 5）で行う。
@@ -65,7 +82,7 @@ module Kanbun
       風雨 兄弟 妻子 草木
       善悪 陰陽 遠近 興亡 盛衰
       地震 日没 雷鳴 鶏鳴 年長
-      孔子 君子 聖人 後世 返景 苛政 霜葉 項梁 陽貨 歳月 吾身 鶏口 牛後
+      孔子 君子 聖人 後世 返景 苛政 霜葉 項梁 陽貨 歳月 吾身 鶏口 牛後 故郷 行楽
     ].freeze
     COMPOUND_VERBS = %w[見聞 逃走 呼吸].freeze
 

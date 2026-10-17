@@ -15,7 +15,7 @@ token NEG_BU NEG_FU NEG_HI NEG_MU NEG_BAKU
       HAN_AI FUKI_MATA
       GI_AN GI_DARE GI_IZURE GI_NANI
       GI_NANSURU GI_NANMOTE GI_IKANI_A GI_IKANI_B
-      VERB VERB_I NOUN ADJ PREP
+      VERB VERB_I NOUN ADJ PREP SAIDOKU
 
 rule
   sentence
@@ -35,6 +35,7 @@ rule
     | gi_adv_clause      { result = val[0] }
     | neg_clause         { result = val[0] }   # 否定（フェーズ1）
     | prohibit_clause    { result = val[0] }   # 禁止（フェーズ1）
+    | saidoku_clause     { result = val[0] }   # 再読文字（Phase 4d）
     | subj_neg_clause    { result = val[0] }   # 主語＋否定・禁止（Phase 4c）
     | verb_phrase        { result = val[0] }
 
@@ -49,6 +50,7 @@ rule
     | NOUN prohibit_clause    { result = seq(lf(val[0]), val[1]) }
     | NOUN double_neg_clause  { result = seq(lf(val[0]), val[1]) }
     | NOUN partial_neg_clause { result = seq(lf(val[0]), val[1]) }
+    | NOUN saidoku_clause     { result = seq(lf(val[0]), val[1]) }
 
   # ---- 二重否定句法 ----
   # 無非〜：〜でないものはない（全て〜である）
@@ -77,6 +79,14 @@ rule
   # ---- 禁止句法 ----
   prohibit_clause
     : PROHIBIT_NAKA verb_phrase { result = ret(lf(val[0]), val[1]) }
+
+  # ---- 再読文字（Phase 4d。未・将・当・応・宜・須・猶・盍）----
+  # 構文は否定と同形（head が block のあとに読まれる）。違いは 1 字を 2 度読むこと。
+  #   未知 → いまだ(1度目) 知(る) ず(2度目)。1 度目は元の位置、2 度目は返り点に従う。
+  # 猶不及（猶ホ及バザルガゴトシ）のように、否定を挟む形も受ける。
+  saidoku_clause
+    : SAIDOKU verb_phrase { result = ret(lf_saidoku(val[0]), val[1]) }
+    | SAIDOKU neg_clause  { result = ret(lf_saidoku(val[0]), val[1]) }
 
   # ---- 動詞句 = 基本構文 5 文型（Phase 4b。HB p.150）----
   # 返り点は語順（構文）で決まり、ヲ／ニの別は辞書（動詞の格情報）で決まる。
@@ -221,6 +231,11 @@ end
 # ---- 構文木の部品（規則のアクションから呼ぶ）----
 def lf(surface, silent = false)
   Kanbun::Tree::Leaf.new(surface, silent: silent)
+end
+
+# 再読文字の葉。読みは Lexicon::SAIDOKU から引く。
+def lf_saidoku(surface)
+  Kanbun::Tree::Leaf.new(surface, saidoku: Kanbun::Lexicon::SAIDOKU.fetch(surface))
 end
 
 def seq(*nodes)

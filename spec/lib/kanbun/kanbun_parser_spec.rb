@@ -145,4 +145,11 @@ RSpec.describe KanbunParser do
       expect { parser.parse("花開鳥") }.to raise_error(Racc::ParseError)
     end
   end
+
+  # ---- Phase 4d: 再読文字 ----
+  cases "Phase 4d: 再読文字（HB p.164）", [
+    %w[未知 未知], %w[将行 将行], %w[応知故郷事 応知故郷事], %w[須読書 須読書],
+    %w[当学道 当学道], %w[宜学 宜学], %w[盍学 盍学], %w[猶有 猶有],
+    %w[過猶不及 過猶不及], %w[行楽須及春 行楽須及春], %w[我未知 我未知]
+  ]
 end

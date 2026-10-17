@@ -23,4 +23,10 @@ RSpec.describe Kanbun::Lexicon do
   it "言 は VERB に解決される" do
     expect(Kanbun::Lexicon::TABLE["言"]).to eq :VERB
   end
+
+  it "再読文字は全て読みの表 SAIDOKU を持つ" do
+    saidoku_words = Kanbun::Lexicon::FUNCTION_WORDS.select { |_, t| t == :SAIDOKU }.keys
+    expect(saidoku_words.sort).to eq Kanbun::Lexicon::SAIDOKU.keys.sort
+    expect(saidoku_words.size).to eq 8
+  end
 end

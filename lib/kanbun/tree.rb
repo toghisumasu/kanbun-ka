@@ -19,15 +19,19 @@ module Kanbun
   module Tree
     # 1 語。surface は 1 字以上（深林・見聞のような辞書語は 1 つの Leaf）。
     # silent は置字（於・于・乎）：位置は占めるが読まない。
+    # saidoku は再読文字（未・将・当…）の読みの表（Lexicon::SAIDOKU の値）。
+    #   1 度目はその位置で、2 度目は Ret の head として返ってから読む。
     class Leaf
-      attr_reader :surface, :silent
+      attr_reader :surface, :silent, :saidoku
 
-      def initialize(surface, silent: false)
+      def initialize(surface, silent: false, saidoku: nil)
         @surface = surface
         @silent = silent
+        @saidoku = saidoku
       end
 
       def silent? = @silent
+      def saidoku? = !@saidoku.nil?
       def to_s = @surface
     end
 

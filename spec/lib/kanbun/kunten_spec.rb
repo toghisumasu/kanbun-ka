@@ -1,6 +1,7 @@
 require "rails_helper"
 require Rails.root.join("lib/kanbun/kanbun_parser.tab").to_s
 require Rails.root.join("lib/kanbun/kunten").to_s
+require Rails.root.join("lib/kanbun/kakikudashi").to_s
 
 # 構文木 → 返り点。検算（Reorder で読み順に戻す）は Kunten.annotate が毎回行う。
 RSpec.describe Kanbun::Kunten do
@@ -76,6 +77,30 @@ RSpec.describe Kanbun::Kunten do
     %w[不亦説乎 不[二]亦説[一]乎 亦説不乎], %w[豈学道哉 豈学[レ]道哉 豈道学哉],
     %w[学乎 学乎 学乎], %w[何為入深林 何為入[二]深林[一] 何為深林入]
   ]
+
+  # 再読文字は 1 度目をその位置で、2 度目を返って読む（読む順に同じ字が 2 回出る）
+  kunten_cases "再読文字（HB p.164）", [
+    %w[未知 未[レ]知 未知未], %w[将行 将[レ]行 将行将],
+    %w[応知故郷事 応[レ]知[二]故郷事[一] 応故郷事知応],
+    %w[須読書 須[レ]読[レ]書 須書読須], %w[当学道 当[レ]学[レ]道 当道学当],
+    %w[宜学 宜[レ]学 宜学宜], %w[盍学 盍[レ]学 盍学盍], %w[猶有 猶[レ]有 猶有猶],
+    %w[過猶不及 過猶[レ]不[レ]及 過猶及不猶], %w[行楽須及春 行楽須[レ]及[レ]春 行楽須春及須],
+    %w[我未知 我未[レ]知 我未知未], %w[未不知 未[レ]不[レ]知 未知不未]
+  ]
+
+  describe "再読文字の注記つき漢文（正本）" do
+    it "1 度目の読み〈表示〉と 2 度目の読み〈非表示〉を書き出し、読み戻せる" do
+      units = units_for("未知")
+      text = Kanbun::Kunten.to_aozora(units)
+      expect(text).to eq "未《いま》ダ〈ず〉［＃レ］知"
+      expect(Kanbun::Aozora.parse(text)).to eq units
+    end
+
+    it "書き下しは 1 度目の読みと 2 度目の読みの両方を出す（活用の送り仮名は Phase 5）" do
+      text = Kanbun::Kunten.to_aozora(units_for("応知故郷事"))
+      expect(Kanbun::Kakikudashi.convert(text, yomi: false, hiragana: true)).to eq "応に故郷事知べし"
+    end
+  end
 
   describe "上下点・甲乙点（手で組んだ木で段の切り替えを確かめる）" do
     def leaf(s, silent: false) = Kanbun::Tree::Leaf.new(s, silent: silent)
