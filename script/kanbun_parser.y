@@ -15,7 +15,7 @@ token NEG_BU NEG_FU NEG_HI NEG_MU NEG_BAKU
       HAN_AI FUKI_MATA
       GI_AN GI_DARE GI_IZURE GI_NANI
       GI_NANSURU GI_NANMOTE GI_IKANI_A GI_IKANI_B
-      VERB VERB_I NOUN ADJ PREP SAIDOKU
+      VERB VERB_I NOUN ADJ ADV PREP SAIDOKU
 
 rule
   sentence
@@ -97,20 +97,32 @@ rule
     | NOUN                     { result = lf(val[0]) }                   # 名詞だけ
     | NOUN NOUN                { result = seq(lf(val[0]), lf(val[1])) }  # ① 孔子聖人（名詞述語）
     | NOUN pred_tr             { result = seq(lf(val[0]), val[1]) }      # ②〜⑤ 我読漢文・返景入深林…
+    | NOUN ADV pred_tr         { result = seq(lf(val[0]), lf(val[1]), val[2]) }  # 人皆食林檎
+    | ADV pred_tr              { result = seq(lf(val[0]), val[1]) }      # 亦学道
+    | ADV pred_in              { result = seq(lf(val[0]), val[1]) }      # 皆死
+    | pred_obj pred_tr         { result = seq(val[0], val[1]) }          # 連動 飲茶読書（茶を飲みて書を読む）
+    | NOUN pred_obj pred_tr    { result = seq(lf(val[0]), val[1], val[2]) }  # 私飲茶読書
     | sv                       { result = val[0] }   # ① 山紫・花開
     | sv sv                    { result = seq(val[0], val[1]) }          # ① 花開鳥啼・山紫水明（対句）
 
   # 主語＋自動詞／形容詞。自動詞（VERB_I）で切るので 花開|鳥啼 が 花 開鳥 と誤読されない。
+  # 動詞が主語になる 学楽（学ぶことは楽しい）も受ける。副詞つきは 人皆死。
   sv
     : NOUN pred_in             { result = seq(lf(val[0]), val[1]) }
+    | NOUN ADV pred_in         { result = seq(lf(val[0]), lf(val[1]), val[2]) }
+    | VERB pred_in             { result = seq(lf(val[0]), val[1]) }
 
   # 他動・多義の述語：目的語（②④⑤）・補語（③）・置字つき補語。述語は目的語・補語のあとに読む。
   pred_tr
     : VERB                     { result = lf(val[0]) }
-    | VERB NOUN                { result = ret(lf(val[0]), lf(val[1])) }                   # ② 読漢文 / ③ 入深林
     | VERB VERB                { result = ret(lf(val[0]), lf(val[1])) }                   # 前の動詞が返って読む（暫定）
-    | VERB NOUN NOUN           { result = ret(lf(val[0]), lf(val[1]), lf(val[2])) }       # ④ 揚名後世 / ⑤ 教籍兵法
     | VERB PREP NOUN           { result = ret(lf(val[0]), lf(val[1], true), lf(val[2])) } # ③ 置字つき補語
+    | pred_obj                 { result = val[0] }
+
+  # 目的語・補語を取る述語（連動の前半にもなる）
+  pred_obj
+    : VERB NOUN                { result = ret(lf(val[0]), lf(val[1])) }                   # ② 読漢文 / ③ 入深林
+    | VERB NOUN NOUN           { result = ret(lf(val[0]), lf(val[1]), lf(val[2])) }       # ④ 揚名後世 / ⑤ 教籍兵法
     | VERB NOUN PREP NOUN      { result = ret(lf(val[0]), lf(val[1]), lf(val[2], true), lf(val[3])) } # ④ 問礼於老子
 
   # 自動詞・形容詞の述語：補語（比較ヨリ・場所ニ）は置字で受ける

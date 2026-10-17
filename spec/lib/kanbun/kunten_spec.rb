@@ -102,6 +102,18 @@ RSpec.describe Kanbun::Kunten do
     end
   end
 
+  kunten_cases "通し確認で出た白文", [
+    %w[私食林檎 私食[二]林檎[一] 私林檎食], %w[私不読漢文 私不[レ]読[二]漢文[一] 私漢文読不],
+    %w[彼不読書 彼不[レ]読[レ]書 彼書読不], %w[山高水清 山高水清 山高水清]
+  ]
+
+  kunten_cases "動詞が主語・副詞・連動", [
+    %w[学楽 学楽 学楽], %w[月出夜明 月出夜明 月出夜明], %w[人皆死 人皆死 人皆死],
+    %w[人皆食林檎 人皆食[二]林檎[一] 人皆林檎食], %w[亦学道 亦学[レ]道 亦道学],
+    %w[飲茶読書 飲[レ]茶読[レ]書 茶飲書読], %w[私飲茶読書 私飲[レ]茶読[レ]書 私茶飲書読],
+    %w[彼非君子 彼非[二]君子[一] 彼君子非]
+  ]
+
   describe "上下点・甲乙点（手で組んだ木で段の切り替えを確かめる）" do
     def leaf(s, silent: false) = Kanbun::Tree::Leaf.new(s, silent: silent)
     def ret(head, *block) = Kanbun::Tree::Ret.new(leaf(head), block)

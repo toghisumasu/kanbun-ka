@@ -61,19 +61,24 @@ module Kanbun
     }.freeze
 
     # 1 字の内容語（従来の VERBS / NOUNS をそのまま移した。回帰を避けるため中身は変えない）
-    VERBS = %w[学 読 書 見 聞 知 行 来 食 飲 思 言 得 入 出 為 陥 慎 争 賢 有 笑
+    VERBS = %w[学 読 書 見 聞 知 行 食 飲 思 言 得 入 為 陥 慎 争 賢 有 笑
                植 買 戚 易 施 成 還 去 帰 習 敏 説 在 好
-               教 問 揚 待 省 及].freeze
+               教 問 揚 待 省 及 登].freeze
     NOUNS = %w[人 君 臣 子 民 文 道 国 師 天 地 王 士 物 事 土 寒 言 計 馬 船
-               我 吾 汝 山 水 花 鳥 虎 礼 名 籍 豚 景 霜 備 患 過 春].freeze
+               我 吾 汝 山 水 花 鳥 虎 礼 名 籍 豚 景 霜 備 患 過 春
+               私 彼 酒 月 夜 風 恥 茶].freeze
 
     # 自動詞（Phase 4b）。目的語を取らないので「花開鳥啼」を 花|開|鳥|啼 と切れる。
     # 既存の VERBS は回帰を避けるためそのまま。自動詞への移動は動詞の格情報辞書（Phase 5）で行う。
-    VERBS_I = %w[開 啼 鳴 咲 飛 流].freeze
+    VERBS_I = %w[開 啼 鳴 咲 飛 流 死 出 来].freeze
+
+    # 副詞（Phase 4g）。述語の直前に置かれ、読む順はそのまま。皆・甚・最・倶・既・嘗・亦・又。
+    # 必・常・復 は部分否定の句法字なので FUNCTION_WORDS 側に残す。
+    ADVS = %w[皆 甚 最 倶 既 嘗 亦 又].freeze
 
     # 形容詞（Phase 4a で追加）。賢・敏・慎・好 などは回帰テストのため VERB のまま。
     # 述語としての扱いは Phase 4b（基本構文 5 文型）で見直す。
-    ADJS = %w[大 小 高 深 長 多 少 美 明 紫 紅 猛 白 青 赤].freeze
+    ADJS = %w[大 小 高 深 長 多 少 美 明 紫 紅 猛 白 青 赤 短 清 楽].freeze
 
     # 複数字語。設計書 §2 の例＋Phase 4a の確認語。
     COMPOUND_NOUNS = %w[
@@ -82,7 +87,7 @@ module Kanbun
       風雨 兄弟 妻子 草木
       善悪 陰陽 遠近 興亡 盛衰
       地震 日没 雷鳴 鶏鳴 年長
-      孔子 君子 聖人 後世 返景 苛政 霜葉 項梁 陽貨 歳月 吾身 鶏口 牛後 故郷 行楽
+      孔子 君子 聖人 後世 返景 苛政 霜葉 項梁 陽貨 歳月 吾身 鶏口 牛後 故郷 行楽 林檎 春夜
     ].freeze
     COMPOUND_VERBS = %w[見聞 逃走 呼吸].freeze
 
@@ -92,6 +97,7 @@ module Kanbun
       { VERB: VERBS + COMPOUND_VERBS,
         VERB_I: VERBS_I,
         NOUN: NOUNS + COMPOUND_NOUNS,
+        ADV: ADVS,
         ADJ: ADJS }.each do |token, words|
         words.each { |word| table[word] ||= token }
       end
@@ -119,7 +125,7 @@ module Kanbun
 
     # 複数の品詞に登録されている表層形（意図しない重複を spec で検出するため）
     def self.overlaps
-      all = FUNCTION_WORDS.keys + VERBS + VERBS_I + COMPOUND_VERBS + NOUNS + COMPOUND_NOUNS + ADJS
+      all = FUNCTION_WORDS.keys + VERBS + VERBS_I + COMPOUND_VERBS + NOUNS + COMPOUND_NOUNS + ADVS + ADJS
       all.tally.select { |_word, count| count > 1 }.keys
     end
   end
