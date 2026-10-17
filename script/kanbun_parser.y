@@ -37,6 +37,7 @@ rule
     | prohibit_clause    { result = val[0] }   # 禁止（フェーズ1）
     | saidoku_clause     { result = val[0] }   # 再読文字（Phase 4d）
     | subj_neg_clause    { result = val[0] }   # 主語＋否定・禁止（Phase 4c）
+    | mata_clause        { result = val[0] }   # 文頭の副詞「復」（Phase 4h）
     | verb_phrase        { result = val[0] }
 
   # 各規則は構文木（Kanbun::Tree）を返す。読む順は 2 つの部品で表す。
@@ -51,6 +52,12 @@ rule
     | NOUN double_neg_clause  { result = seq(lf(val[0]), val[1]) }
     | NOUN partial_neg_clause { result = seq(lf(val[0]), val[1]) }
     | NOUN saidoku_clause     { result = seq(lf(val[0]), val[1]) }
+    | NOUN pred_obj neg_clause           { result = seq(lf(val[0]), val[1], val[2]) }  # 小閣重衾不怕寒（Phase 4h）
+    | pred_obj ADV neg_clause            { result = seq(val[0], lf(val[1]), val[2]) }  # 潤物細無声
+
+  # ---- 文頭の「復」（また）。部分否定 不復〜 は NEG_BU MATA で別に受ける（Phase 4h）----
+  mata_clause
+    : MATA verb_phrase { result = seq(lf(val[0]), val[1]) }
 
   # ---- 二重否定句法 ----
   # 無非〜：〜でないものはない（全て〜である）
@@ -102,6 +109,13 @@ rule
     | ADV pred_in              { result = seq(lf(val[0]), val[1]) }      # 皆死
     | pred_obj pred_tr         { result = seq(val[0], val[1]) }          # 連動 飲茶読書（茶を飲みて書を読む）
     | NOUN pred_obj pred_tr    { result = seq(lf(val[0]), val[1], val[2]) }  # 私飲茶読書
+    | NOUN NOUN pred_tr        { result = seq(lf(val[0]), lf(val[1]), val[2]) }  # 春夜洛城聞笛（Phase 4h）
+    | NOUN NOUN pred_obj pred_tr { result = seq(lf(val[0]), lf(val[1]), val[2], val[3]) }  # 遺愛寺鐘欹枕聴
+    | NOUN NOUN ADV pred_tr    { result = seq(lf(val[0]), lf(val[1]), lf(val[2]), val[3]) }  # 誰家玉笛暗飛声
+    | pred_obj ADV pred_tr     { result = seq(val[0], lf(val[1]), val[2]) }      # 随風潜入夜
+    | ADV pred_obj pred_tr     { result = seq(lf(val[0]), val[1], val[2]) }      # 散入春風満洛城
+    | NOUN sv                  { result = seq(lf(val[0]), val[1]) }              # 野径雲倶黒（主題＋主述）
+    | sv sv NOUN NOUN          { result = seq(val[0], val[1], lf(val[2]), lf(val[3])) }  # 心泰身寧是帰処
     | sv                       { result = val[0] }   # ① 山紫・花開
     | sv sv                    { result = seq(val[0], val[1]) }          # ① 花開鳥啼・山紫水明（対句）
 
@@ -111,6 +125,7 @@ rule
     : NOUN pred_in             { result = seq(lf(val[0]), val[1]) }
     | NOUN ADV pred_in         { result = seq(lf(val[0]), lf(val[1]), val[2]) }
     | VERB pred_in             { result = seq(lf(val[0]), val[1]) }
+    | NOUN GENTEI_DOKU pred_in { result = seq(lf(val[0]), lf(val[1]), val[2]) }   # 江船火独明（Phase 4h）
 
   # 他動・多義の述語：目的語（②④⑤）・補語（③）・置字つき補語。述語は目的語・補語のあとに読む。
   pred_tr
