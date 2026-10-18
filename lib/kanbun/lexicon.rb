@@ -38,7 +38,7 @@ module Kanbun
       '雖' => :KATEN_IEDOMO, '縦' => :KATEN_TATOI,
       '惟' => :GENTEI_YUI, '独' => :GENTEI_DOKU,
       '豈' => :HAN_AI, '安' => :GI_AN, '誰' => :GI_DARE, '孰' => :GI_IZURE, '何' => :GI_NANI,
-      '而' => :ER, '使' => :SHIEKI, '令' => :SHIEKI,
+      '而' => :ER, '所' => :SHO, '者' => :SHA, '使' => :SHIEKI, '令' => :SHIEKI,
       '則' => :SOKU, '矣' => :SHI_I, '乎' => :SHI_KO, '哉' => :SHI_SAI, '邪' => :SHI_JA,
       # 置字（補語マーカー）。乎 は下の token_for で文末助字と区別する
       '於' => :PREP, '于' => :PREP,
