@@ -8,14 +8,35 @@ class MeCabAdapter
   F_SUB1  = 1   # 品詞細分類1
   F_BASE  = 6   # 原形
 
+  # 「AとB」の「と」は MeCab では並立助詞で、共同（友と飲む）と並列（りんごとみかん）を区別できない。
+  # 直前が人を表す語のときだけ共同（TO）とみなし、それ以外は従来どおり捨てる（Phase 4n）。
+  PERSON_NOUNS = %w[友 友人 仲間 兄 弟 姉 妹 父 母 子 妻 夫 親 孫 先生 師 君 彼 彼女 客 隣人].freeze
+
   # mecab_adapter.rb の call メソッドを修正
   def self.call(mecab_output)
     raw = mecab_output.split("\n")
               .reject { |l| l.start_with?("EOS") || l.strip.empty? }
               .filter_map { |l| build_token(l) }
+    raw = resolve_to(raw)             # ⓪ と を共同(TO)にするか捨てるか決める
     raw = merge_shimau_pattern(raw)   # ① てしまう を除去
     raw = merge_suru_verbs(raw)       # ② サ変動詞を統合
     merge_compound_verbs(raw)         # ③ 複合動詞を統合
+  end
+
+  # ⓪ 「と」: 直前が人を表す名詞・代名詞なら共同(TO)、それ以外は捨てる
+  private_class_method def self.resolve_to(tokens)
+    result = []
+    tokens.each do |t|
+      if t.pos_type == KanbunBNFParser::TO
+        prev = result.last
+        person = prev && [KanbunBNFParser::NOUN, KanbunBNFParser::PRON].include?(prev.pos_type) &&
+                 PERSON_NOUNS.include?(prev.base_form)
+        result << t if person
+      else
+        result << t
+      end
+    end
+    result
   end
 
   # ① て + しまう → 両方除去（完了は直後のたが担う）
@@ -118,8 +139,19 @@ class MeCabAdapter
       when "より"      then KanbunBNFParser::YORI
       when "て"
         sub1 == "接続助詞" ? KanbunBNFParser::CONJ_TE : nil
+      when "で"
+        # 飲んで・読んで の で は接続助詞（て と同じ）。場所の で は格助詞（Phase 4n）
+        case sub1
+        when "接続助詞" then KanbunBNFParser::CONJ_TE
+        when "格助詞"   then KanbunBNFParser::DE
+        end
+      when "と"
+        KanbunBNFParser::TO   # 共同かどうかは resolve_to で決める
+      when "だけ"
+        KanbunBNFParser::DAKE
       when "か", "や"
-        sub1 == "終助詞" ? KanbunBNFParser::QUESTION : nil
+        # か は「副助詞／並立助詞／終助詞」という長い品詞細分類で出る（Phase 4n）
+        sub1.to_s.include?("終助詞") ? KanbunBNFParser::QUESTION : nil
       end
     when "動詞"
       %w[ある いる].include?(base) ? KanbunBNFParser::ARU : KanbunBNFParser::VERB
@@ -135,4 +167,3 @@ class MeCabAdapter
     end
   end
 end
-

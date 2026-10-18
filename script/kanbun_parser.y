@@ -15,7 +15,7 @@ token NEG_BU NEG_FU NEG_HI NEG_MU NEG_BAKU
       HAN_AI FUKI_MATA
       GI_AN GI_DARE GI_IZURE GI_NANI
       GI_NANSURU GI_NANMOTE GI_IKANI_A GI_IKANI_B
-      SOKU SHI_I SHIEKI ER
+      SOKU SHI_I SHIEKI ER SHO SHA
       VERB VERB_I NOUN ADJ ADV PREP SAIDOKU
 
 rule
@@ -59,6 +59,7 @@ rule
     | NOUN double_neg_clause  { result = seq(lf(val[0]), val[1]) }
     | NOUN partial_neg_clause { result = seq(lf(val[0]), val[1]) }
     | NOUN saidoku_clause     { result = seq(lf(val[0]), val[1]) }
+    | NOUN neg_clause SHI_KO  { result = seq(lf(val[0]), val[1], lf('乎')) }   # 此不楽乎（Phase 4o）
     | NOUN shieki_clause      { result = seq(lf(val[0]), val[1]) }   # 王使臣行（Phase 4m）
     | NOUN pred_obj neg_clause           { result = seq(lf(val[0]), val[1], val[2]) }  # 小閣重衾不怕寒（Phase 4h）
     | pred_obj ADV neg_clause            { result = seq(val[0], lf(val[1]), val[2]) }  # 潤物細無声
@@ -103,6 +104,8 @@ rule
     : NEG_MU NEG_HI verb_phrase { result = ret(lf('無'), ret(lf('非'), val[2])) }
     | NEG_MU NEG_BU verb_phrase { result = ret(lf('無'), ret(lf('不'), val[2])) }
     | NEG_HI NEG_BU verb_phrase { result = ret(lf('非'), ret(lf('不'), val[2])) }
+    | NEG_MU NEG_BU verb_phrase SHA { result = ret(lf('無'), ret(lf('不'), val[2]), lf('者')) }   # 無不飲者（Phase 4o）
+    | NEG_MU SHO    verb_phrase     { result = ret(lf('無'), ret(lf('所'), val[2])) }              # 無所知（Phase 4o）
 
   # ---- 部分否定句法 ----
   # 不必〜：必ずしも〜ではない  不常〜：いつも〜とは限らない  不復〜：二度と〜しない
@@ -232,6 +235,7 @@ rule
   shitsumon_clause
     : verb_phrase SHI_KO          { result = seq(val[0], lf('乎')) }
     | verb_phrase SHI_JA          { result = seq(val[0], lf('邪')) }
+    | neg_clause  SHI_KO          { result = seq(val[0], lf('乎')) }   # 此不楽乎の 不楽乎（Phase 4o）
     | verb_phrase YO_NIMO         { result = seq(val[0], lf('与')) }
     ;
 
