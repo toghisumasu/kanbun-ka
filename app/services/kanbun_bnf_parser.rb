@@ -28,6 +28,7 @@ class KanbunBNFParser
   DE       = :de      # 場所の で（→ 於）  Phase 4n
   TO       = :to      # 共同の と（→ 与）  Phase 4n
   DAKE     = :dake    # だけ（→ 惟）       Phase 4n
+  BA       = :ba      # 仮定の ば（→ 則）  Phase 4s
 
   # ---------------------------------------------------------
   # ParseResult
@@ -39,6 +40,7 @@ class KanbunBNFParser
     :chain, :question,
     :negated, :passive, :causative, :past, :sentence_type,
     :locative, :comitative, :limited,
+    :condition, :main,
     keyword_init: true
   ) do
     PARTICLE_TYPES = %i[wa ga wo ni yori de to dake].freeze
@@ -58,6 +60,8 @@ class KanbunBNFParser
                   p << "主語: #{nouns_only(subject)}"       if subject
                   p << "#{"不＋" if negated}述語: #{predicate.base_form}"
                 end
+              when :conditional
+                ["仮定: #{condition.to_kanbun_hint}", "帰結: #{main.to_kanbun_hint}"]
               when :sequential
                 [].tap do |p|
                   p << "主語: #{nouns_only(subject)}"        if subject
@@ -335,8 +339,52 @@ class KanbunBNFParser
     end
   end
 
+  # 「VなければV」「VすればV」: 未然形・仮定形＋ば のあとに帰結の文が続く（Phase 4s）
+  #   学ばなければ道を知らない → 条件(不 学ぶ) 則 帰結(不 知る 道)
+  def conditional_antecedent
+    seq do
+      subj  = optional { limited_subject_phrase } || optional { subject_phrase }
+      obj   = optional { object_phrase }
+      indir = optional { indirect_phrase }
+      pred  = term(VERB); break nil unless pred
+      neg   = optional { term(NEG) }
+      ba    = term(BA);   break nil unless ba
+
+      ParseResult.new(
+        subject: subj, object: obj, indirect: indir,
+        predicate: pred, negated: !!neg,
+        passive: false, causative: false, past: false,
+        chain: nil, question: false,
+        sentence_type: obj ? :transitive : :intransitive
+      )
+    end
+  end
+
+  def conditional_sentence
+    seq do
+      cond = conditional_antecedent; break nil unless cond
+      main = alt(
+        -> { existential_sentence },
+        -> { adjectival_sentence },
+        -> { sequential_sentence },
+        -> { comparative_sentence },
+        -> { verbal_sentence }
+      )
+      break nil unless main
+
+      ParseResult.new(
+        subject: nil, object: nil, indirect: nil,
+        predicate: main.predicate, negated: false,
+        passive: false, causative: false, past: false,
+        chain: nil, question: false,
+        sentence_type: :conditional, condition: cond, main: main
+      )
+    end
+  end
+
   def sentence_rule
     r = alt(
+      -> { conditional_sentence },
       -> { existential_sentence },
       -> { adjectival_sentence },
       -> { sequential_sentence },

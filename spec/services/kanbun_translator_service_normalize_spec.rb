@@ -25,4 +25,26 @@ RSpec.describe KanbunTranslatorService do
   it "文字列でなければそのまま返す" do
     expect(normalize(nil)).to be_nil
   end
+
+  describe "drop_stray_question_marker（Phase 4t）" do
+    def drop(input, hakubun, skeleton)
+      KanbunTranslatorService.new(input).send(:drop_stray_question_marker, hakubun, skeleton)
+    end
+
+    it "疑問でない文に混じった乎を除く" do
+      expect(drop("学ばなければ道を知らない", "不学則不知乎道", "不 学ぶ 則 不 知る 道")).to eq "不学則不知道"
+    end
+
+    it "骨格に乎があれば残す" do
+      expect(drop("君は学ぶか", "君学乎", "君 学ぶ 乎")).to eq "君学乎"
+    end
+
+    it "原文に か があれば残す" do
+      expect(drop("楽しくないか", "不亦楽乎", "不 楽しい")).to eq "不亦楽乎"
+    end
+
+    it "骨格がなければそのまま" do
+      expect(drop("山は雲より高い", "山高於乎雲", nil)).to eq "山高於乎雲"
+    end
+  end
 end
