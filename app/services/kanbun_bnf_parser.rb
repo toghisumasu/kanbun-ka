@@ -25,6 +25,9 @@ class KanbunBNFParser
   CONJ_TE  = :conj_te
   YORI     = :yori
   QUESTION = :question
+  DE       = :de      # 場所の で（→ 於）  Phase 4n
+  TO       = :to      # 共同の と（→ 与）  Phase 4n
+  DAKE     = :dake    # だけ（→ 惟）       Phase 4n
 
   # ---------------------------------------------------------
   # ParseResult
@@ -35,9 +38,10 @@ class KanbunBNFParser
     :subject, :object, :indirect, :predicate,
     :chain, :question,
     :negated, :passive, :causative, :past, :sentence_type,
+    :locative, :comitative, :limited,
     keyword_init: true
   ) do
-    PARTICLE_TYPES = %i[wa ga wo ni yori].freeze
+    PARTICLE_TYPES = %i[wa ga wo ni yori de to dake].freeze
 
     def to_kanbun_hint
       parts = case sentence_type
@@ -75,7 +79,9 @@ class KanbunBNFParser
                   p << "[使役 → 使構文]"                            if causative
                   p << "[受身 → 被構文]"                            if passive
                   p << "#{"不＋" if negated}述語: #{predicate.base_form}"
+                  p << "共同(→ 与): #{nouns_only(comitative)}"      if comitative
                   p << "目的語: #{nouns_only(object)}"              if object
+                  p << "場所(→ 於): #{nouns_only(locative)}"        if locative
                   p << "に格（→ 於/給）: #{nouns_only(indirect)}"  if indirect
                   p << "[過去・完了]"                                if past
                 end
@@ -149,6 +155,10 @@ class KanbunBNFParser
   # ---------------------------------------------------------
   # 部品ルール
   # ---------------------------------------------------------
+  def limited?(subject_tokens)
+    !subject_tokens.nil? && subject_tokens.any? { |t| t.pos_type == DAKE }
+  end
+
   def noun_tokens
     ts = []
     while (t = term(NOUN, PRON))
@@ -161,6 +171,32 @@ class KanbunBNFParser
     seq do
       ns = noun_tokens;  break nil unless ns
       m  = term(WA, GA); break nil unless m
+      ns + [m]
+    end
+  end
+
+  # ただ人だけが … の だけ（限定）。subject_phrase に差し込んで使う
+  def limited_subject_phrase
+    seq do
+      ns = noun_tokens;  break nil unless ns
+      d  = term(DAKE);   break nil unless d
+      m  = term(WA, GA); break nil unless m
+      ns + [d, m]
+    end
+  end
+
+  def locative_phrase
+    seq do
+      ns = noun_tokens; break nil unless ns
+      m  = term(DE);    break nil unless m
+      ns + [m]
+    end
+  end
+
+  def comitative_phrase
+    seq do
+      ns = noun_tokens; break nil unless ns
+      m  = term(TO);    break nil unless m
       ns + [m]
     end
   end
@@ -210,7 +246,7 @@ class KanbunBNFParser
 
   def adjectival_sentence
     seq do
-      subj  = optional { subject_phrase }
+      subj  = optional { limited_subject_phrase } || optional { subject_phrase }
       pred  = term(ADJ, ADJV); break nil unless pred
       neg   = optional { term(NEG) }
       _past = optional { term(PAST) }
@@ -220,14 +256,17 @@ class KanbunBNFParser
         predicate: pred, negated: !!neg,
         passive: false, causative: false, past: !!_past,
         chain: nil, question: false,
-        sentence_type: :adjectival
+        sentence_type: :adjectival,
+        limited: limited?(subj)
       )
     end
   end
 
   def sequential_sentence
     seq do
-      subj  = optional { subject_phrase }
+      subj  = optional { limited_subject_phrase } || optional { subject_phrase }
+      comit = optional { comitative_phrase }
+      loc   = optional { locative_phrase }
       obj   = optional { object_phrase }
       indir = optional { indirect_phrase }
 
@@ -247,7 +286,8 @@ class KanbunBNFParser
         predicate: chain.last, chain: chain,
         negated: !!neg, passive: false, causative: false,
         past: !!_past, question: false,
-        sentence_type: :sequential
+        sentence_type: :sequential,
+        locative: loc, comitative: comit, limited: limited?(subj)
       )
     end
   end
@@ -273,7 +313,9 @@ class KanbunBNFParser
 
   def verbal_sentence
     seq do
-      subj  = optional { subject_phrase }
+      subj  = optional { limited_subject_phrase } || optional { subject_phrase }
+      comit = optional { comitative_phrase }
+      loc   = optional { locative_phrase }
       obj   = optional { object_phrase }
       indir = optional { indirect_phrase }
       pred  = term(VERB); break nil unless pred
@@ -287,7 +329,8 @@ class KanbunBNFParser
         predicate: pred, negated: !!neg,
         passive: !!pass, causative: !!caus, past: !!_past,
         chain: nil, question: false,
-        sentence_type: obj ? :transitive : :intransitive
+        sentence_type: obj ? :transitive : :intransitive,
+        locative: loc, comitative: comit, limited: limited?(subj)
       )
     end
   end
@@ -307,4 +350,3 @@ class KanbunBNFParser
     r
   end
 end
-
