@@ -149,6 +149,9 @@ class MeCabAdapter
         KanbunBNFParser::TO   # 共同かどうかは resolve_to で決める
       when "だけ"
         KanbunBNFParser::DAKE
+      when "ば"
+        # 仮定の ば（学ばなければ・学べば）。なければ の なけれ は助動詞 ない(NEG) で拾われる（Phase 4s）
+        sub1 == "接続助詞" ? KanbunBNFParser::BA : nil
       when "か", "や"
         # か は「副助詞／並立助詞／終助詞」という長い品詞細分類で出る（Phase 4n）
         sub1.to_s.include?("終助詞") ? KanbunBNFParser::QUESTION : nil

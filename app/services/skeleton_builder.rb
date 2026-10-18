@@ -22,6 +22,7 @@ class SkeletonBuilder
             when :adjectival   then build_adjectival
             when :sequential   then build_sequential
             when :comparative  then build_comparative
+            when :conditional  then build_conditional
             else                    build_verbal     # :transitive / :intransitive
             end
     parts << sentence_end_marker
@@ -77,6 +78,12 @@ class SkeletonBuilder
     else
       [subject, @r.predicate.base_form, "於", standard]
     end
+  end
+
+  # 仮定: 条件 + 則 + 帰結（Phase 4s）
+  #   学ばなければ道を知らない → "不 学ぶ 則 不 知る 道"
+  def build_conditional
+    [self.class.call(@r.condition), "則", self.class.call(@r.main)]
   end
 
   # 動詞文: 使役・受身・通常の3パターンで語順が変わる
