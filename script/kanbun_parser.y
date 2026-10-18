@@ -15,12 +15,13 @@ token NEG_BU NEG_FU NEG_HI NEG_MU NEG_BAKU
       HAN_AI FUKI_MATA
       GI_AN GI_DARE GI_IZURE GI_NANI
       GI_NANSURU GI_NANMOTE GI_IKANI_A GI_IKANI_B
-      SOKU
+      SOKU SHI_I SHIEKI ER
       VERB VERB_I NOUN ADJ ADV PREP SAIDOKU
 
 rule
   sentence
-    : clause { result = val[0] }
+    : clause         { result = val[0] }
+    | clause SHI_I   { result = seq(val[0], lf('矣', true)) }   # 文末の置き字「矣」（Phase 4m）
 
   clause
     : double_neg_clause  { result = val[0] }   # 二重否定
@@ -37,6 +38,11 @@ rule
     | neg_clause         { result = val[0] }   # 否定（フェーズ1）
     | prohibit_clause    { result = val[0] }   # 禁止（フェーズ1）
     | saidoku_clause     { result = val[0] }   # 再読文字（Phase 4d）
+    | ren_clause         { result = val[0] }   # 〜而〜（Phase 4m）
+    | sokuclause         { result = val[0] }   # 〜則〜（Phase 4m）
+    | seq_neg_clause     { result = val[0] }   # 否定の連続 不知非恥（Phase 4m）
+    | shieki_clause      { result = val[0] }   # 使役（Phase 4m）
+    | tomo_clause        { result = val[0] }   # 与A〜（Phase 4m）
     | subj_neg_clause    { result = val[0] }   # 主語＋否定・禁止（Phase 4c）
     | mata_clause        { result = val[0] }   # 文頭の副詞「復」（Phase 4h）
     | verb_phrase        { result = val[0] }
@@ -53,8 +59,37 @@ rule
     | NOUN double_neg_clause  { result = seq(lf(val[0]), val[1]) }
     | NOUN partial_neg_clause { result = seq(lf(val[0]), val[1]) }
     | NOUN saidoku_clause     { result = seq(lf(val[0]), val[1]) }
+    | NOUN shieki_clause      { result = seq(lf(val[0]), val[1]) }   # 王使臣行（Phase 4m）
     | NOUN pred_obj neg_clause           { result = seq(lf(val[0]), val[1], val[2]) }  # 小閣重衾不怕寒（Phase 4h）
     | pred_obj ADV neg_clause            { result = seq(val[0], lf(val[1]), val[2]) }  # 潤物細無声
+
+  # ---- 条件「AなればB」の則（Phase 4m）。若〜則〜 は katen_clause が先に受ける ----
+  sokuclause
+    : cond_part SOKU cond_part { result = seq(val[0], lf('則'), val[2]) }
+
+  cond_part
+    : verb_phrase { result = val[0] }
+    | neg_clause  { result = val[0] }
+
+  # ---- 順接の「而」。読まない置き字（Vシテ）として位置だけ占める（Phase 4m）----
+  ren_clause
+    : ren_part ER ren_part { result = seq(val[0], lf('而', true), val[2]) }
+
+  ren_part
+    : verb_phrase { result = val[0] }
+    | tomo_clause { result = val[0] }
+
+  # ---- 否定の連続 不知非恥（知らざるは恥に非ず）----
+  seq_neg_clause
+    : neg_clause neg_clause { result = seq(val[0], val[1]) }
+
+  # ---- 使役 使A〜（AをしてVせしむ）。使は A と V のあとに返って読む ----
+  shieki_clause
+    : SHIEKI NOUN verb_phrase { result = ret(lf(val[0]), lf(val[1]), val[2]) }
+
+  # ---- 共同 与A〜（Aと〜）。与 は A のあとに読む ----
+  tomo_clause
+    : YO_NIMO NOUN verb_phrase { result = seq(ret(lf('与'), lf(val[1])), val[2]) }
 
   # ---- 文頭の「復」（また）。部分否定 不復〜 は NEG_BU MATA で別に受ける（Phase 4h）----
   mata_clause
