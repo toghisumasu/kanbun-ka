@@ -38,7 +38,7 @@ class KanbunTranslatorService
     ・「〜ないことはない」は 無不＋述語＋目的語。「〜ない人（者）はいない」は 無不＋述語＋者
     ・「何も〜ない」は 主語＋無所＋述語
     ・「ただAだけが〜」は 惟＋A＋述語＋目的語
-    ・「〜ないか」のような疑問は 不〜乎
+    ・乎 は、原文が「か」で終わる疑問文にだけ付ける（「〜ないか」は 不〜乎）。疑問でない文には付けない
     ・「Aしないのは恥ではない」のような否定の連続は 不A非恥 と並べる
     ・修飾する語は名詞の前に置く（高い山 → 高山）
     ・「Aと〜する」は 与A＋述語。「〜して〜する」は 〜而〜
@@ -103,6 +103,9 @@ class KanbunTranslatorService
       hakubun = normalize(call_ollama(build_retry_prompt(prompt, hakubun)))
     end
 
+    # Step 4c: 疑問でない文に LLM が付けた乎を除く（骨格と原文が疑問でないと言っているとき）
+    hakubun = drop_stray_question_marker(hakubun, skeleton)
+
     # Step 5: Raccパーサー → 訓点・書き下し文
     kunten_result = KanbunParserService.call(hakubun)
 
@@ -134,6 +137,16 @@ class KanbunTranslatorService
     return raw unless raw.is_a?(String)
 
     raw.lines.first.to_s.delete(" 　\t\r\n").gsub(/[#{TRADITIONAL.keys.join}]/, TRADITIONAL)
+  end
+
+  # 骨格があり、骨格にも原文にも疑問（乎・か）がないのに、白文に 乎 が混じっていたら除く。
+  # 例）不学則不知道 に LLM が 不学則不知乎道 と余計な乎を入れた（Phase 4t）。
+  # 乎 を足す向きはしない（何為〜 のように、疑問でも乎を付けない形があるため）。
+  def drop_stray_question_marker(hakubun, skeleton)
+    return hakubun unless hakubun.is_a?(String) && skeleton.is_a?(String)
+    return hakubun if skeleton.include?("乎") || @input.include?("か")
+
+    hakubun.delete("乎")
   end
 
   # 文字列で、空でなく、白文の形でないときだけ作り直す（nil・空は作り直しても変わらない）。
