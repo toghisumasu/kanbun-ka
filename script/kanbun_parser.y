@@ -15,6 +15,7 @@ token NEG_BU NEG_FU NEG_HI NEG_MU NEG_BAKU
       HAN_AI FUKI_MATA
       GI_AN GI_DARE GI_IZURE GI_NANI
       GI_NANSURU GI_NANMOTE GI_IKANI_A GI_IKANI_B
+      SOKU
       VERB VERB_I NOUN ADJ ADV PREP SAIDOKU
 
 rule
@@ -174,6 +175,8 @@ rule
     | KATEN_NYO       verb_phrase         { result = seq(lf('如'), val[1]) }
     | KATEN_NYO       NEG_BU verb_phrase  { result = seq(lf('如'), ret(lf('不'), val[2])) }
     | KATEN_IYA       verb_phrase         { result = seq(lf('苟'), val[1]) }
+    | KATEN_SHIKA     verb_phrase SOKU verb_phrase        { result = seq(lf('若'), val[1], lf('則'), val[3]) }  # 若〜則〜（Phase 4l）
+    | KATEN_SHIKA     NEG_BU verb_phrase SOKU verb_phrase { result = seq(lf('若'), ret(lf('不'), val[2]), lf('則'), val[4]) }
     | KATEN_IYA       NEG_MU verb_phrase  { result = seq(lf('苟'), ret(lf('無'), val[2])) }
 
   # 仮定法・逆接型（〜雖〜 / 〜縦〜）
@@ -211,6 +214,7 @@ rule
   gi_adv_clause
     : GI_AN      VERB        { result = seq(lf('安'), lf(val[1])) }
     | GI_DARE    verb_phrase { result = seq(lf('誰'), val[1]) }
+    | GI_DARE    verb_phrase SHI_KO { result = seq(lf('誰'), val[1], lf('乎')) }   # 誰行乎（Phase 4l）
     | GI_IZURE   NOUN VERB   { result = seq(lf('孰'), lf(val[1]), lf(val[2])) }
     | GI_NANSURU verb_phrase { result = seq(lf('何為'), val[1]) }
     | GI_NANMOTE verb_phrase { result = seq(lf('何以'), val[1]) }

@@ -1,3 +1,4 @@
+
 # app/services/skeleton_builder.rb
 #
 # 役割: ParseResult → 漢文白文骨格を生成する
@@ -56,12 +57,19 @@ class SkeletonBuilder
     ]
   end
 
-  # 主語 + 莫如/不若 + 比較基準 + 述語
-  # 馬は牛より速い → "馬 莫如 牛 速い"
-  # 地は人より優れない → "地 不若 人 優れる"
+  # 比較（Phase 4k で肯定の形を直した）
+  #   肯定: 主語 + 述語 + 於 + 比較基準
+  #     馬は牛より速い → "馬 速い 於 牛"（漢文では 馬速於牛。莫如 は「〜に如くは莫し」で別の句法）
+  #   否定: 主語 + 不若 + 比較基準 + 述語
+  #     地は人より優れない → "地 不若 人 優れる"
   def build_comparative
-    cop = @r.negated ? "不若" : "莫如"
-    [nouns_only(@r.subject), cop, nouns_only(@r.object), @r.predicate.base_form]
+    subject = nouns_only(@r.subject)
+    standard = nouns_only(@r.object)
+    if @r.negated
+      [subject, "不若", standard, @r.predicate.base_form]
+    else
+      [subject, @r.predicate.base_form, "於", standard]
+    end
   end
 
   # 動詞文: 使役・受身・通常の3パターンで語順が変わる
@@ -105,4 +113,3 @@ class SkeletonBuilder
     result.empty? ? nil : result
   end
 end
-

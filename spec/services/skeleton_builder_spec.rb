@@ -78,10 +78,10 @@ RSpec.describe SkeletonBuilder do
   end
 
   describe "比較文" do
-    it "馬は牛より速い → 莫如" do
+    it "馬は牛より速い → 於" do
       tokens = [tok("馬",:noun), tok("は",:wa), tok("牛",:noun),
                 tok("より",:yori), tok("速い",:adj)]
-      expect(build(tokens)).to eq "馬 莫如 牛 速い"
+      expect(build(tokens)).to eq "馬 速い 於 牛"
     end
 
     it "地は人より優れない → 不若" do
