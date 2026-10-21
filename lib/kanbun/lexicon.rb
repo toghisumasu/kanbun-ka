@@ -38,7 +38,7 @@ module Kanbun
       '雖' => :KATEN_IEDOMO, '縦' => :KATEN_TATOI,
       '惟' => :GENTEI_YUI, '独' => :GENTEI_DOKU,
       '豈' => :HAN_AI, '安' => :GI_AN, '誰' => :GI_DARE, '孰' => :GI_IZURE, '何' => :GI_NANI,
-      '而' => :ER, '所' => :SHO, '者' => :SHA, '使' => :SHIEKI, '令' => :SHIEKI,
+      '自' => :KARA, '従' => :KARA, '而' => :ER, '所' => :SHO, '者' => :SHA, '使' => :SHIEKI, '令' => :SHIEKI,
       '則' => :SOKU, '矣' => :SHI_I, '乎' => :SHI_KO, '哉' => :SHI_SAI, '邪' => :SHI_JA,
       # 置字（補語マーカー）。乎 は下の token_for で文末助字と区別する
       '於' => :PREP, '于' => :PREP,
@@ -79,7 +79,7 @@ module Kanbun
 
     # 副詞（Phase 4g）。述語の直前に置かれ、読む順はそのまま。皆・甚・最・倶・既・嘗・亦・又。
     # 必・常・復 は部分否定の句法字なので FUNCTION_WORDS 側に残す。
-    ADVS = %w[皆 甚 最 倶 既 嘗 亦 又 但 暗 潜 細 何独 散].freeze
+    ADVS = %w[皆 甚 最 倶 既 嘗 亦 又 但 暗 潜 細 何独 散 能].freeze
 
     # 形容詞（Phase 4a で追加）。賢・敏・慎・好 などは回帰テストのため VERB のまま。
     # 述語としての扱いは Phase 4b（基本構文 5 文型）で見直す。
@@ -95,9 +95,9 @@ module Kanbun
       孔子 君子 聖人 後世 返景 苛政 霜葉 項梁 陽貨 歳月 吾身 鶏口 牛後 故郷 行楽 林檎 春夜
       空山 人語 響 青苔 洛城 玉笛 此夜 曲中 折柳 何人 故園 好雨 時節
       錦官城 小閣 遺愛寺 香炉峰 野径 江船 長安 帰処
-      先生 学生 時間 老人 今日 昔人
+      先生 学生 時間 老人 今日 昔人 閃光 鹿児島
     ].freeze
-    COMPOUND_VERBS = %w[見聞 逃走 呼吸].freeze
+    COMPOUND_VERBS = %w[見聞 逃走 呼吸 望見].freeze
 
     # 表層形 → トークン名。先に入れた品詞が優先（言 は VERB）。
     TABLE = begin

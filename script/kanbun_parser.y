@@ -15,7 +15,7 @@ token NEG_BU NEG_FU NEG_HI NEG_MU NEG_BAKU
       HAN_AI FUKI_MATA
       GI_AN GI_DARE GI_IZURE GI_NANI
       GI_NANSURU GI_NANMOTE GI_IKANI_A GI_IKANI_B
-      SOKU SHI_I SHIEKI ER SHO SHA
+      SOKU SHI_I SHIEKI ER SHO SHA KARA
       VERB VERB_I NOUN ADJ ADV PREP SAIDOKU
 
 rule
@@ -43,6 +43,7 @@ rule
     | seq_neg_clause     { result = val[0] }   # 否定の連続 不知非恥（Phase 4m）
     | shieki_clause      { result = val[0] }   # 使役（Phase 4m）
     | tomo_clause        { result = val[0] }   # 与A〜（Phase 4m）
+    | kara_clause        { result = val[0] }   # 自A〜（Phase 4w）
     | subj_neg_clause    { result = val[0] }   # 主語＋否定・禁止（Phase 4c）
     | mata_clause        { result = val[0] }   # 文頭の副詞「復」（Phase 4h）
     | verb_phrase        { result = val[0] }
@@ -61,6 +62,7 @@ rule
     | NOUN saidoku_clause     { result = seq(lf(val[0]), val[1]) }
     | NOUN neg_clause SHI_KO  { result = seq(lf(val[0]), val[1], lf('乎')) }   # 此不楽乎（Phase 4o）
     | NOUN shieki_clause      { result = seq(lf(val[0]), val[1]) }   # 王使臣行（Phase 4m）
+    | NOUN kara_clause        { result = seq(lf(val[0]), val[1]) }   # 彼自鹿児島来（Phase 4w）
     | NOUN pred_obj neg_clause           { result = seq(lf(val[0]), val[1], val[2]) }  # 小閣重衾不怕寒（Phase 4h）
     | pred_obj ADV neg_clause            { result = seq(val[0], lf(val[1]), val[2]) }  # 潤物細無声
 
@@ -87,6 +89,10 @@ rule
   # ---- 使役 使A〜（AをしてVせしむ）。使は A と V のあとに返って読む ----
   shieki_clause
     : SHIEKI NOUN verb_phrase { result = ret(lf(val[0]), lf(val[1]), val[2]) }
+
+  # ---- 起点 自A〜・従A〜（Aより〜）。自 は A のあとに返って読む（鹿児島ヨリ）----
+  kara_clause
+    : KARA NOUN verb_phrase { result = seq(ret(lf(val[0]), lf(val[1])), val[2]) }
 
   # ---- 共同 与A〜（Aと〜）。与 は A のあとに読む ----
   tomo_clause

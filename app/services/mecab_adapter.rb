@@ -18,6 +18,7 @@ class MeCabAdapter
               .reject { |l| l.start_with?("EOS") || l.strip.empty? }
               .filter_map { |l| build_token(l) }
     raw = resolve_to(raw)             # ⓪ と を共同(TO)にするか捨てるか決める
+    raw = merge_dekiru(raw)           # ⓪' できる を可能(POT)に整える（Phase 4x）
     raw = merge_shimau_pattern(raw)   # ① てしまう を除去
     raw = merge_suru_verbs(raw)       # ② サ変動詞を統合
     merge_compound_verbs(raw)         # ③ 複合動詞を統合
@@ -35,6 +36,32 @@ class MeCabAdapter
       else
         result << t
       end
+    end
+    result
+  end
+
+  # ⓪' 可能の「できる」（Phase 4x）
+  #   望見できる   → VERB(望見) + POT（する は付けない。LLM が 望見→望 と縮めにくくなる）
+  #   泳ぐことができる → VERB(泳ぐ) + POT（こと・が を除く）
+  #   それ以外（「勉強ができる」など）は POT を残し、BNF が通らず LLM に任せる
+  private_class_method def self.merge_dekiru(tokens)
+    result = []
+    tokens.each do |t|
+      if t.pos_type == KanbunBNFParser::POT
+        prev = result.last
+        if prev&.pos_type == KanbunBNFParser::GA &&
+           result[-2]&.pos_type == KanbunBNFParser::NOUN && result[-2].base_form == "こと" &&
+           result[-3]&.pos_type == KanbunBNFParser::VERB
+          result.pop(2)                       # が・こと を除く
+        elsif prev&.pos_type == KanbunBNFParser::NOUN && prev.base_form != "こと"
+          result[-1] = KanbunBNFParser::Token.new(
+            surface:   prev.surface,
+            pos_type:  KanbunBNFParser::VERB,
+            base_form: prev.base_form
+          )
+        end
+      end
+      result << t
     end
     result
   end
@@ -137,6 +164,9 @@ class MeCabAdapter
       when "を"        then KanbunBNFParser::WO
       when "に"        then KanbunBNFParser::NI
       when "より"      then KanbunBNFParser::YORI
+      when "から"
+        # 起点の から（格助詞）→ KARA。理由の から（接続助詞）は REASON にして骨格を作らない（Phase 4x）
+        sub1 == "格助詞" ? KanbunBNFParser::KARA : KanbunBNFParser::REASON
       when "て"
         sub1 == "接続助詞" ? KanbunBNFParser::CONJ_TE : nil
       when "で"
@@ -157,7 +187,10 @@ class MeCabAdapter
         sub1.to_s.include?("終助詞") ? KanbunBNFParser::QUESTION : nil
       end
     when "動詞"
-      %w[ある いる].include?(base) ? KanbunBNFParser::ARU : KanbunBNFParser::VERB
+      if    %w[ある いる].include?(base) then KanbunBNFParser::ARU
+      elsif base == "できる"             then KanbunBNFParser::POT   # 可能（Phase 4x）
+      else                                    KanbunBNFParser::VERB
+      end
     when "形容詞"
       base == "ない" ? KanbunBNFParser::NAI_ADJ : KanbunBNFParser::ADJ
     when "助動詞"

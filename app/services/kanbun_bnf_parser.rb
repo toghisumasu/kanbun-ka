@@ -29,6 +29,9 @@ class KanbunBNFParser
   TO       = :to      # 共同の と（→ 与）  Phase 4n
   DAKE     = :dake    # だけ（→ 惟）       Phase 4n
   BA       = :ba      # 仮定の ば（→ 則）  Phase 4s
+  KARA     = :kara    # 起点の から（→ 自）Phase 4x
+  POT      = :pot     # 可能の できる（→ 能）Phase 4x
+  REASON   = :reason  # 理由の から。どの規則も受け付けず、骨格を作らず LLM に任せる（Phase 4x）
 
   # ---------------------------------------------------------
   # ParseResult
@@ -41,9 +44,10 @@ class KanbunBNFParser
     :negated, :passive, :causative, :past, :sentence_type,
     :locative, :comitative, :limited,
     :condition, :main,
+    :origin, :potential,
     keyword_init: true
   ) do
-    PARTICLE_TYPES = %i[wa ga wo ni yori de to dake].freeze
+    PARTICLE_TYPES = %i[wa ga wo ni yori de to dake kara].freeze
 
     def to_kanbun_hint
       parts = case sentence_type
@@ -82,6 +86,8 @@ class KanbunBNFParser
                   p << "主語: #{nouns_only(subject)}"               if subject
                   p << "[使役 → 使構文]"                            if causative
                   p << "[受身 → 被構文]"                            if passive
+                  p << "起点(→ 自): #{nouns_only(origin)}"          if origin
+                  p << "[可能 → 能]"                                 if potential
                   p << "#{"不＋" if negated}述語: #{predicate.base_form}"
                   p << "共同(→ 与): #{nouns_only(comitative)}"      if comitative
                   p << "目的語: #{nouns_only(object)}"              if object
@@ -205,6 +211,15 @@ class KanbunBNFParser
     end
   end
 
+  # 鹿児島から … の から（起点）
+  def origin_phrase
+    seq do
+      ns = noun_tokens; break nil unless ns
+      m  = term(KARA);  break nil unless m
+      ns + [m]
+    end
+  end
+
   def object_phrase
     seq do
       ns = noun_tokens; break nil unless ns
@@ -270,6 +285,7 @@ class KanbunBNFParser
     seq do
       subj  = optional { limited_subject_phrase } || optional { subject_phrase }
       comit = optional { comitative_phrase }
+      orig  = optional { origin_phrase }
       loc   = optional { locative_phrase }
       obj   = optional { object_phrase }
       indir = optional { indirect_phrase }
@@ -291,7 +307,7 @@ class KanbunBNFParser
         negated: !!neg, passive: false, causative: false,
         past: !!_past, question: false,
         sentence_type: :sequential,
-        locative: loc, comitative: comit, limited: limited?(subj)
+        locative: loc, comitative: comit, limited: limited?(subj), origin: orig
       )
     end
   end
@@ -319,10 +335,12 @@ class KanbunBNFParser
     seq do
       subj  = optional { limited_subject_phrase } || optional { subject_phrase }
       comit = optional { comitative_phrase }
+      orig  = optional { origin_phrase }
       loc   = optional { locative_phrase }
       obj   = optional { object_phrase }
       indir = optional { indirect_phrase }
       pred  = term(VERB); break nil unless pred
+      pot   = optional { term(POT) }
       caus  = optional { term(CAUS) }
       pass  = optional { term(PASSIVE) }
       neg   = optional { term(NEG) }
@@ -334,7 +352,8 @@ class KanbunBNFParser
         passive: !!pass, causative: !!caus, past: !!_past,
         chain: nil, question: false,
         sentence_type: obj ? :transitive : :intransitive,
-        locative: loc, comitative: comit, limited: limited?(subj)
+        locative: loc, comitative: comit, limited: limited?(subj),
+        origin: orig, potential: !!pot
       )
     end
   end

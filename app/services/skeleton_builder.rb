@@ -6,7 +6,7 @@
 # LLMは「語彙の漢字置換のみ」を担う（語順変更は不要）
 
 class SkeletonBuilder
-  PARTICLE_TYPES = %i[wa ga wo ni yori de to dake].freeze
+  PARTICLE_TYPES = %i[wa ga wo ni yori de to dake kara].freeze
 
   def self.call(result)
     new(result).build
@@ -56,8 +56,8 @@ class SkeletonBuilder
   #   友と酒を飲んで語る → "与 友 飲む 酒 而 語る"
   def build_sequential
     chain = (@r.chain || []).map(&:base_form)
-    if @r.comitative || @r.locative
-      parts = [subject_text, *comitative_parts, chain.first, nouns_only(@r.object), *locative_parts]
+    if @r.comitative || @r.locative || @r.origin
+      parts = [subject_text, *comitative_parts, *origin_parts, chain.first, nouns_only(@r.object), *locative_parts]
       chain.drop(1).each { |verb| parts += ["而", verb] }
       return parts
     end
@@ -105,8 +105,10 @@ class SkeletonBuilder
     else
       # 通常: 主語 [不] 述語 目的語 [於 間接]
       #   兄は海で魚を釣る → "兄 釣る 魚 於 海"、友と酒を飲む → "与 友 飲む 酒"（Phase 4n）
+      #   彼は鹿児島から来る → "彼 自 鹿児島 来る"、閃光を望見できる → "… 能 望見する 閃光"（Phase 4x）
       parts = [
-        subject_text, *comitative_parts, ("不" if @r.negated),
+        subject_text, *comitative_parts, *origin_parts, ("不" if @r.negated),
+        ("能" if @r.potential),
         @r.predicate.base_form, nouns_only(@r.object), *locative_parts
       ]
       parts += ["於", nouns_only(@r.indirect)] if nouns_only(@r.indirect)
@@ -131,6 +133,12 @@ class SkeletonBuilder
   def comitative_parts
     who = nouns_only(@r.comitative)
     who ? ["与", who] : []
+  end
+
+  # 起点「自 X」。起点がなければ空（Phase 4x）
+  def origin_parts
+    from = nouns_only(@r.origin)
+    from ? ["自", from] : []
   end
 
   # 述語・目的語のあとに置く「於 場所」。場所がなければ空

@@ -1,6 +1,7 @@
 require "open3"
 require "net/http"
 require "json"
+require_relative "../../lib/kanbun/lexicon"
 
 class KanbunTranslatorService
   OLLAMA_URL   = "http://localhost:11434/api/generate".freeze
@@ -44,6 +45,8 @@ class KanbunTranslatorService
     ・「Aと〜する」は 与A＋述語。「〜して〜する」は 〜而〜
     ・使役「AにBさせる」は 使A＋B。受身「AにBされる」は B於A
     ・場所「Aで〜する」は 述語＋目的語＋於＋A
+    ・起点「Aから／Aより〜する」（比較の「より」とは別）は 自A＋述語。可能「〜できる」「〜し得る」は 能＋述語
+    ・骨格に「自 A」があるときは、そのまま 自A の形で述語の前に置く（語順を変えない）。「能」があれば述語の直前
     ・日本の漢字（学・楽・帰・処）で書き、簡体字・繁体字は使わない
     例）原文：彼は書を読まない → 白文：彼不読書
     例）原文：月は明るく風は清い → 白文：月明風清
@@ -71,6 +74,9 @@ class KanbunTranslatorService
     例）原文：父は子に書を読ませた → 白文：父使子読書
     例）原文：鹿は虎に食べられた → 白文：鹿食於虎
     例）原文：庭で花を見る → 白文：見花於庭
+    例）原文：山より海を見る → 白文：自山見海
+    例）原文：泳ぐことができる → 白文：能泳
+    例）原文：弟は京都から手紙を送ることができる → 白文：弟自京都能送書
   RULES
 
   def self.call(japanese_text)
@@ -105,6 +111,12 @@ class KanbunTranslatorService
 
     # Step 4c: 疑問でない文に LLM が付けた乎を除く（骨格と原文が疑問でないと言っているとき）
     hakubun = drop_stray_question_marker(hakubun, skeleton)
+
+    # Step 4d: 骨格の漢語（望見・閃光など）を LLM が縮めて辞書にない字になったら、元の語に戻す
+    hakubun = restore_compound_words(hakubun, skeleton)
+
+    # Step 4e: LLM が落とした主語（骨格の先頭の語）を、白文が構造マーカーで始まるときだけ戻す
+    hakubun = restore_leading_subject(hakubun, skeleton)
 
     # Step 5: Raccパーサー → 訓点・書き下し文
     kunten_result = KanbunParserService.call(hakubun)
@@ -149,6 +161,49 @@ class KanbunTranslatorService
     hakubun.delete("乎")
   end
 
+  # 骨格にある漢字だけの語（2字以上）を LLM が縮めたとき、元の語に戻す（Phase 4x）。
+  # 例）骨格 私 自 鹿児島 能 望見 閃光 に対し 私自鹿児島能望閃光 → 私自鹿児島能望見閃光。
+  # 戻すのは、骨格の語が辞書にあり、縮んだ形（先頭部分）が辞書にない場合だけ。
+  # 辞書にある字への言い換え（子供 → 子）はそのままにする。
+  def restore_compound_words(hakubun, skeleton)
+    return hakubun unless hakubun.is_a?(String) && skeleton.is_a?(String)
+
+    skeleton.split.each do |word|
+      next unless word.length >= 2 && word.match?(/\A\p{Han}+\z/)
+      next unless Kanbun::Lexicon::TABLE.key?(word)
+      next if hakubun.include?(word)
+
+      (word.length - 1).downto(1) do |n|
+        prefix = word[0, n]
+        next if Kanbun::Lexicon::TABLE.key?(prefix)
+        next unless hakubun.scan(prefix).size == 1
+
+        hakubun = hakubun.sub(prefix, word)
+        break
+      end
+    end
+    hakubun
+  end
+
+  # 白文が構造マーカー（自・不・能…）で始まっているのに、骨格の先頭の語（主語）が白文にない
+  # ときだけ、その語を先頭に戻す（Phase 4x）。
+  # 例）骨格 私 自 鹿児島 能 望見 閃光 に対し 自鹿児島能望見閃光 → 私自鹿児島能望見閃光。
+  # 骨格自身がマーカーで始まる文（不学則… 有足於蛇 など）や、主語を別の語に言い換えた場合は触らない。
+  SUBJECT_STOP_MARKERS = %w[自 不 能 無 有 勿 若 使 惟 与 非 被 何].freeze
+
+  def restore_leading_subject(hakubun, skeleton)
+    return hakubun unless hakubun.is_a?(String) && skeleton.is_a?(String)
+
+    first = skeleton.split.first
+    return hakubun unless first&.match?(/\A\p{Han}+\z/)
+    return hakubun if SUBJECT_STOP_MARKERS.include?(first)
+    return hakubun unless Kanbun::Lexicon::TABLE.key?(first)
+    return hakubun if hakubun.include?(first)
+    return hakubun unless SUBJECT_STOP_MARKERS.include?(hakubun[0])
+
+    first + hakubun
+  end
+
   # 文字列で、空でなく、白文の形でないときだけ作り直す（nil・空は作り直しても変わらない）。
   def retry_needed?(hakubun)
     hakubun.is_a?(String) && !hakubun.empty? && !hakubun.match?(HAKUBUN_PATTERN)
@@ -179,7 +234,7 @@ class KanbunTranslatorService
   def build_prompt(original, skeleton)
     if skeleton
       # 骨格に実際に含まれるマーカーだけ抽出
-      all_markers  = %w[不 使 被 有 無 莫如 不若 於 矣 乎]
+      all_markers  = %w[不 使 被 有 無 莫如 不若 於 矣 乎 自 能]
       used_markers = all_markers.select { |m| skeleton.include?(m) }
       marker_note  = used_markers.empty? ? "なし" : used_markers.join(" ")
 
