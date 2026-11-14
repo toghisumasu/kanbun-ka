@@ -16,13 +16,27 @@ token NEG_BU NEG_FU NEG_HI NEG_MU NEG_BAKU
       HAN_AI FUKI_MATA
       GI_AN GI_DARE GI_IZURE GI_NANI
       GI_NANSURU GI_NANMOTE GI_IKANI_A GI_IKANI_B
-      SOKU SHI_I SHIEKI ER SHO SHA KARA
+      SOKU SHI_I SHI_YA SHI_EN SHIEKI ER SHO SHA KARA
       VERB VERB_I NOUN ADJ ADV PREP SAIDOKU
 
 rule
   sentence
     : clause         { result = val[0] }
-    | clause SHI_I   { result = seq(val[0], lf('矣', true)) }   # 文末の置き字「矣」（Phase 4m）
+    | clause final_particles { result = seq(val[0], *val[1]) }   # 文末助字 矣・也・焉・哉（Phase 4m / 5a M3）
+
+  # 文末助字。矣・焉 は読まない置き字、也・哉 は読む（なり／か・かな。読みは書き下し側で決める）。
+  # 重ねられるのは 也哉・矣哉・也矣 だけ。哉也・也也 などは通さない。
+  final_particles
+    : final_one                { result = [val[0]] }
+    | SHI_YA SHI_SAI           { result = [lf('也'), lf('哉')] }
+    | SHI_I  SHI_SAI           { result = [lf('矣', true), lf('哉')] }
+    | SHI_YA SHI_I             { result = [lf('也'), lf('矣', true)] }
+
+  final_one
+    : SHI_I   { result = lf('矣', true) }
+    | SHI_YA  { result = lf('也') }
+    | SHI_EN  { result = lf('焉', true) }
+    | SHI_SAI { result = lf('哉') }
 
   clause
     : double_neg_clause  { result = val[0] }   # 二重否定
@@ -81,6 +95,7 @@ rule
 
   ren_part
     : verb_phrase { result = val[0] }
+    | neg_clause  { result = val[0] }   # 学而不行（Phase 5a M3）
     | tomo_clause { result = val[0] }
 
   # ---- 否定の連続 不知非恥（知らざるは恥に非ず）----
@@ -255,7 +270,6 @@ rule
     | FUKI_MATA   verb_phrase SHI_KO   { result = seq(ret(lf('不'), lf('亦'), val[1]), lf('乎')) }
     | NAMU        verb_phrase SHI_KO   { result = seq(lf('寧'), val[1], lf('乎')) }
     | GENTEI_DOKU verb_phrase SHI_KO   { result = seq(lf('独'), val[1], lf('乎')) }
-    | GENTEI_DOKU verb_phrase SHI_SAI  { result = seq(lf('独'), val[1], lf('哉')) }
     ;
 
   # --- 疑問副詞句法 ---
