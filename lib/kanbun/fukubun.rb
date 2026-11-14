@@ -114,11 +114,19 @@ module Kanbun
           next if jitsuji?(leaf) && leaf.surface.each_char.any? { |c| found.include?("字の欠落: #{c}") } # 1 で報告済み
 
           reasons << "#{jitsuji?(leaf) ? '実字' : '機能語'}の欠落: #{leaf.surface}"
-        elsif jitsuji?(leaf) && leaf.role.nil? && !leaf.saidoku? && !pc.text.start_with?(leaf.surface)
+        elsif jitsuji?(leaf) && leaf.role.nil? && !leaf.saidoku? && !in_order?(leaf.surface, pc.text)
           reasons << "実字の位置: #{leaf.surface}"
         end
       end
       reasons.uniq
+    end
+
+    # 断片に、表層形の字が順に（間に送り仮名を挟んでよい）残っている。何独 => 何ぞ独り も通す。
+    def in_order?(surface, text)
+      return true if text.start_with?(surface)
+
+      pos = 0
+      surface.each_char.all? { |c| (pos = text.index(c, pos)) && (pos += 1) }
     end
 
     # ---- 内部 ----
@@ -135,6 +143,6 @@ module Kanbun
       unit.yomi&.hidden? && unit.yomi.text.empty?
     end
 
-    private_class_method :leaves_of, :silent?
+    private_class_method :leaves_of, :silent?, :in_order?
   end
 end

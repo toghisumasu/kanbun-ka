@@ -127,3 +127,11 @@ S2 で検査項目を 4 つに絞った際、phase5a の `Yomi.fukubun_problems`
   2. 確認の結果、`KanbunTranslatorService::Result` は `kakikudashi_exact`・`kakikudashi_reasons` を**捨てていた**（phase5a から）。reasons が呼び出し側に届かないので、`Result` に 2 フィールドを足して通した（spec 先行）。`kanbun_repl.rb` は暫定のとき「（暫定）」と理由を表示するようにした。
   3. `kanbun_translator_service_jp.rb`（旧版の同名クラス定義）には触れていない。
 - 検証：spec 先行（赤 5 件→緑）。RSpec 726 件・0 失敗・pending 25（増減なし）、Racc conflict 0、ベンチ 一致率 48/50・exact:true 41/50（減った文 0、導入前後で同じ）。実際の呼び出し：`KanbunParserService.call("殺於敵")` → 「敵殺」・exact:false・理由あり、`彼為敵所殺` → 書き下し・exact:true。`kanbun_repl.rb`（実 Ollama・MeCab）で「彼は敵に殺された」→ 白文 彼殺於敵 → 「彼敵殺（暫定）」＋理由行を表示、「私は漢文を読む」→ 書き下し（理由なし）。
+
+## S8 何独の読みの修正と、読みの表の監査
+
+- 監査（修正前、`bin/rails runner script/lexicon_audit.rb`）：副詞表 31・ADJS 30・SAIDOKU_SECOND 8・VERBS 78 項目を検査（A 送り仮名に漢字／B 自分の表層形と重複／C ほかの語にも同じ字）。**重複の疑いは 1 件だけ**：`ADVS['何独'] => 'ぞ独り'`（A・B・C すべて該当。C は 非独・不独・独）。同種の項目は他になく、一覧で報告すべきものはなかった。
+- 修正：`Yomi::ADV_WHOLE = { '何独' => '何ぞ独り' }`（全体の読みを 1 項目で持つ）を新設し、`render_content` で ADVS より先に引く。ADVS からは 何独 を除いた。書き下しは「故郷何ぞ独り長安に在り」。
+- S6 の `parts` との整合：項目の断片「何ぞ独り」は表層形「何独」で**始まらない**ため、`Fukubun` の実字の位置検査が誤検出する。位置検査を「断片に表層形の字が順に残っている（間に送り仮名を挟んでよい）」に緩めた（`in_order?`）。別の位置に同じ字があるだけの場合は従来どおり検出する（S6 の spec 緑のまま）。
+- 再発防止：spec で「ADVS の送り仮名に漢字を入れない」「ADV_WHOLE の漢字は表層形と一致する」を検査。`lexicon_audit.rb` も ADV_WHOLE の整合を表示する。
+- 検証：spec 先行（赤 4 件→緑）。RSpec 730 件・0 失敗・pending 25（増減なし）、Racc conflict 0、ベンチ 一致率 48/50・exact:true 41/50（減った文 0）、ベンチ外 360 文（spec の追加で 357→360）：exact 256／違反 **0**（故郷何独在長安 は exact になった）。

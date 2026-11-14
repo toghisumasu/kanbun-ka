@@ -1,6 +1,7 @@
 require "rails_helper"
 require Rails.root.join("lib/kanbun/kanbun_parser.tab").to_s
 require Rails.root.join("lib/kanbun/yomi").to_s
+require Rails.root.join("lib/kanbun/fukubun").to_s
 
 # 構文木 → 書き下し（歴史的仮名遣い）。Phase 5a M6。
 # 期待値は自作文または原典の句（論語・孟子・荘子など）を、自分で書き下したもの。
@@ -109,6 +110,31 @@ RSpec.describe Kanbun::Yomi do
 
     it "書き下しの実字（漢字）は、白文の字のうち助字を除いたものが全て順序を変えて含まれる" do
       expect(kaki("我読漢文").delete("はをむ")).to eq "我漢文読"
+    end
+  end
+
+  # Phase 5b S8: 副詞の読み。送り仮名（ADVS）に漢字を入れると、表層形と二重に出る。
+  describe "副詞の読み（何独 は全体の読み「何ぞ独り」を 1 項目で持つ）" do
+    it "故郷何独在長安 は 独 を重複させない" do
+      expect(kaki("故郷何独在長安")).to eq "故郷何ぞ独り長安に在り"
+      expect(kaki("故郷何独在長安").count("独")).to eq 1
+    end
+
+    it "副詞表の送り仮名に漢字は入らない（入れるなら全体の読み ADV_WHOLE に持つ）" do
+      expect(described_class::ADVS.values.join).not_to match(/\p{Han}/)
+    end
+
+    it "全体の読みは、表層形の字をすべて順に含む（表層形の字を落とさない）" do
+      described_class::ADV_WHOLE.each do |surface, reading|
+        expect(reading.scan(/\p{Han}/).join).to eq(surface), surface
+      end
+    end
+
+    it "全体の読みの副詞は、項目の断片が書き下しと矛盾しない（Fukubun が項目つきで通す）" do
+      tree = KanbunParser.new.parse_tree("故郷何独在長安", strict: true)
+      result = described_class.analyze(tree)
+      expect(result.parts.map(&:text).join).to eq result.text
+      expect(Kanbun::Fukubun.check(tree, result.text, parts: result.parts)).to eq []
     end
   end
 end
