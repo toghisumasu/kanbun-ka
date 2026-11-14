@@ -117,11 +117,15 @@ module Kanbun
       def role = leaf.role
     end
 
+    # 項目ごとの出力：構文木の葉（読む順での 1 語）と、その書き下し断片。
+    Piece = Struct.new(:leaf, :second, :text)
+
     module_function
 
     # text: 書き下し／ambiguities: 読みが 1 つに決まらない句形（パーサーが木に付けた理由）。
     # 書き下しが白文と矛盾しないかは Kanbun::Fukubun が別に検査する（Yomi の自己申告にしない）。
-    Result = Struct.new(:text, :ambiguities) do
+    # parts: 項目ごとの出力 [Piece]（読む順。つなぐと text になる）。Fukubun が項目単位の検査に使う。
+    Result = Struct.new(:text, :ambiguities, :parts) do
       # Yomi が「読みは 1 つに決まる」と確信しているか（exact の必要条件。十分条件ではない）
       def exact? = ambiguities.empty?
     end
@@ -140,7 +144,8 @@ module Kanbun
         out[i], demand = render(items, i, demand)
       end
       add_topic!(items, out)
-      Result.new(out.join, ambiguities(tree))
+      parts = items.each_with_index.map { |it, i| Piece.new(it.leaf, it.second, out[i]) }
+      Result.new(out.join, ambiguities(tree), parts)
     end
 
     # ---- 曖昧な句形 ----

@@ -134,4 +134,80 @@ RSpec.describe Kanbun::Fukubun do
       end
     end
   end
+
+  # S6: Yomi が返す項目（構文木の葉と、その書き下し断片）を使う検査。
+  #   機能語（不・之・者・所…）の欠落と、実字の位置（別の位置に同じ字があっても通さない）
+  describe "6. 項目ごとの検査（機能語の欠落・実字の位置）" do
+    require Rails.root.join("lib/kanbun/yomi").to_s
+
+    def analyzed(hakubun)
+      tree = KanbunParser.new.parse_tree(hakubun, strict: true)
+      [tree, Kanbun::Yomi.analyze(tree)]
+    end
+
+    # surface の項目の断片を text に差し替えた壊れた項目列で検査する
+    def check_with(hakubun, surface, text, nth: 0)
+      tree, result = analyzed(hakubun)
+      parts = result.parts.map { |pc| pc.dup }
+      parts.select { |pc| pc.leaf.surface == surface }[nth].text = text
+      described_class.check(tree, parts.map(&:text).join, parts: parts)
+    end
+
+    it "Yomi の結果は、項目ごとの葉と断片を持ち、断片をつなぐと書き下しになる" do
+      _tree, result = analyzed("我読漢文")
+      expect(result.parts.map(&:text).join).to eq result.text
+      expect(result.parts.map { |pc| pc.leaf.surface }).to eq %w[我 漢文 読]
+    end
+
+    it "不 が落ちた書き下しを検出する（読みの順は変わらない）" do
+      expect(check_with("不読書", "不", "")).to include("機能語の欠落: 不")
+    end
+
+    it "之 が落ちた書き下しを検出する" do
+      # 之 は辞書上 実字（NOUN）なので「字の欠落」として検出される
+      expect(check_with("我知之", "之", "")).to include(a_string_matching(/欠落: 之/))
+    end
+
+    it "実字が別の位置に出る書き下しを検出する（字の数も順も合っている）" do
+      tree, result = analyzed("我読漢文")
+      parts = result.parts.map(&:dup)
+      parts.find { |pc| pc.leaf.surface == "漢文" }.text = "漢文を読"
+      parts.find { |pc| pc.leaf.surface == "読" }.text = "む"
+      text = parts.map(&:text).join
+      expect(text).to eq result.text
+      expect(described_class.check(tree, text)).to eq []
+      expect(described_class.check(tree, text, parts: parts)).to include("実字の位置: 読")
+    end
+
+    it "与A・自A・従A は字を出さない（助詞が名詞の送り仮名になる）ので欠落としない" do
+      tree, result = analyzed("与友飲酒而語")
+      yo = result.parts.find { |pc| pc.leaf.surface == "与" }
+      expect(yo.text).to eq ""
+      expect(described_class.check(tree, result.text, parts: result.parts)).to eq []
+    end
+
+    it "断片をつないだものが書き下しと違えば検出する" do
+      tree, result = analyzed("我読漢文")
+      expect(described_class.check(tree, "我は漢文を読む。", parts: result.parts)).to include(a_string_matching(/断片/))
+    end
+
+    it "正例：ベンチの期待白文と固定文は、項目つきの検査でも通る" do
+      corpus = File.readlines(Rails.root.join("script/bench_expected.tsv"), chomp: true)
+                   .reject { |l| l.strip.empty? || l.start_with?("#") }
+                   .flat_map { |l| l.split("\t")[1..] }
+      corpus += %w[未知 将行 当学 盍行 不得不知 不可不学於師 非徒無益而又害之 彼為敵所殺 被殺 見殺
+                   其疾如風 人莫若友 学而不行 行而学矣 入於深林焉 問礼於老子 不亦説乎 与友飲酒而語]
+      checked = 0
+      failures = corpus.uniq.filter_map do |hakubun|
+        tree, result = analyzed(hakubun)
+        checked += 1
+        reasons = described_class.check(tree, result.text, parts: result.parts)
+        "#{hakubun}: #{reasons.join(' / ')}" unless reasons.empty?
+      rescue Kanbun::Yomi::MissingEntry, Racc::ParseError, KanbunParser::UnknownCharacters
+        nil
+      end
+      expect(checked).to be > 20
+      expect(failures).to eq []
+    end
+  end
 end

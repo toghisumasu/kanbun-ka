@@ -66,7 +66,7 @@ class KanbunParserService
   #   曖昧な句形は Yomi の書き下しを返すが exact にせず、曖昧な理由を返す。止めずに警告つきで返す。
   def kakikudashi(tree, aozora)
     result = Kanbun::Yomi.analyze(tree)
-    violations = Kanbun::Fukubun.check(tree, result.text)
+    violations = Kanbun::Fukubun.check(tree, result.text, parts: result.parts)
     return [interim(aozora), false, violations] unless violations.empty?
 
     [result.text, result.exact?, result.ambiguities]

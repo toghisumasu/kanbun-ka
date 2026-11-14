@@ -32,7 +32,8 @@ module Kanbun
 
     # tree: 白文の構文木（KanbunParser#parse_tree の結果）／kakikudashi: 書き下し（String）
     # 戻り値: 違反の理由（String）の配列。違反がなければ空。
-    def check(tree, kakikudashi)
+    # parts: Yomi::Result#parts（項目ごとの葉と断片）。あれば項目単位の検査（6）も行う。
+    def check(tree, kakikudashi, parts: nil)
       leaves = leaves_of(tree)
       jitsuji = jitsuji_chars(leaves)
       units = Kunten.annotate(tree)
@@ -43,6 +44,7 @@ module Kanbun
       reasons << order_reason(expected, actual) if reasons.empty? && expected != actual
       reasons.concat(saidoku_reasons(leaves, kakikudashi))
       reasons.concat(okiji_reasons(leaves, kakikudashi))
+      reasons.concat(part_reasons(parts, kakikudashi, reasons)) if parts
       reasons.compact
     end
 
@@ -91,6 +93,32 @@ module Kanbun
         allowed = leaves.count { |l| (!l.silent? || l.role == :ruika_ji) && l.surface.include?(c) }
         "置き字が書き下しに出ている: #{c}" if kakikudashi.count(c) > allowed
       end
+    end
+
+    # 与A・自A・従A は字そのものを出さず、助詞（と・より）が直前の名詞の送り仮名になる
+    PARTICLE_ONLY = %w[与 自 従].freeze
+
+    # 6（phase5a の項目検査の復活）: Yomi の項目ごとの断片を使う。
+    #   - 読む字（機能語）が断片ごと落ちていない（与・自・従は例外）
+    #   - 実字の断片に、その漢字が残っている（別の位置に同じ字があっても通さない）
+    #   - 断片をつないだものが、渡された書き下しと一致する
+    def part_reasons(parts, kakikudashi, found)
+      reasons = []
+      reasons << "書き下しと項目の断片が一致しません" if parts.map(&:text).join != kakikudashi
+      parts.each do |pc|
+        leaf = pc.leaf
+        next if leaf.silent?
+
+        if pc.text.empty?
+          next if PARTICLE_ONLY.include?(leaf.surface)
+          next if jitsuji?(leaf) && leaf.surface.each_char.any? { |c| found.include?("字の欠落: #{c}") } # 1 で報告済み
+
+          reasons << "#{jitsuji?(leaf) ? '実字' : '機能語'}の欠落: #{leaf.surface}"
+        elsif jitsuji?(leaf) && leaf.role.nil? && !leaf.saidoku? && !pc.text.start_with?(leaf.surface)
+          reasons << "実字の位置: #{leaf.surface}"
+        end
+      end
+      reasons.uniq
     end
 
     # ---- 内部 ----
