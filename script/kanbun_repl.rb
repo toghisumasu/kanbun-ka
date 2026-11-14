@@ -22,7 +22,8 @@ while (line = Readline.readline("日本語> ", true))
       puts "  訓点    : （解析できません）#{r.parse_error}"
     else
       puts "  返り点  : #{r.kunten}"
-      puts "  書き下し: #{r.kakikudashi}"
+      puts "  書き下し: #{r.kakikudashi}#{r.kakikudashi_exact ? '' : '（暫定）'}"
+      Array(r.kakikudashi_reasons).each { |reason| puts "  理由    : #{reason}" }
     end
   rescue StandardError => e
     puts "  エラー  : #{e.class}: #{e.message}"

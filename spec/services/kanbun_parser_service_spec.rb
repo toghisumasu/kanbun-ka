@@ -28,14 +28,30 @@ RSpec.describe KanbunParserService do
       expect(described_class.call("未知")[:kakikudashi]).to eq "未だ知らず"
     end
 
-    it "曖昧な句形（殺於敵・為敵殺）は書き下しを返すが exact にせず、理由を添える。見V は確定した受身なので exact" do
-      expect(described_class.call("見殺")[:kakikudashi_exact]).to be true
-      %w[殺於敵 為敵殺].each do |hakubun|
-        result = described_class.call(hakubun)
-        expect(result[:status]).to eq(:parsed), hakubun
-        expect(result[:kakikudashi_exact]).to be(false), hakubun
-        expect(result[:kakikudashi_reasons]).not_to be_empty, hakubun
-        expect(result[:kakikudashi]).not_to eq(hakubun), hakubun
+    def interim_of(result)
+      Kanbun::Kakikudashi.convert(result[:kunten_aozora], yomi: false, hiragana: true)
+    end
+
+    describe "曖昧な受身は暫定出力（漢字を読み順に並べたもの）に戻す（Phase 5b S7）" do
+      %w[殺於敵 為敵殺 学於人].each do |hakubun|
+        it "#{hakubun}: 暫定出力・exact:false・理由つき（止めない）" do
+          result = described_class.call(hakubun)
+          expect(result[:status]).to eq :parsed
+          expect(result[:kakikudashi_exact]).to be false
+          expect(result[:kakikudashi_reasons]).to include(a_string_matching(/受身か(能動|連動)か決まりません/))
+          expect(result[:kakikudashi]).to eq interim_of(result)
+          expect(result[:kakikudashi]).not_to match(/[ぁ-ん]/) # 助詞・活用を付けた読みを返さない
+        end
+      end
+
+      it "確定した受身（為A所B・見V・被V於A）は書き下しのまま exact:true" do
+        { "彼為敵所殺" => "彼は敵の殺す所と為る", "見殺" => "殺さる", "被殺於敵" => nil }.each do |hakubun, expected|
+          result = described_class.call(hakubun)
+          expect(result[:kakikudashi_exact]).to be(true), hakubun
+          expect(result[:kakikudashi_reasons]).to eq([]), hakubun
+          expect(result[:kakikudashi]).not_to eq(interim_of(result)), hakubun
+          expect(result[:kakikudashi]).to eq(expected) if expected
+        end
       end
     end
 
@@ -63,11 +79,11 @@ RSpec.describe KanbunParserService do
         expect(Kanbun::Fukubun.check(tree, result[:kakikudashi])).to eq []
       end
 
-      it "Yomi が曖昧と申告したときは、検査に通っても exact にしない（書き下しは返す）" do
+      it "Yomi が曖昧と申告したときは、検査に通っても exact にせず、暫定出力と理由を返す" do
         result = described_class.call("殺於敵")
         expect(result[:kakikudashi_exact]).to be false
         expect(result[:kakikudashi_reasons]).to include(a_string_matching(/受身か能動か/))
-        expect(result[:kakikudashi]).to eq "敵に殺す"
+        expect(result[:kakikudashi]).to eq "敵殺"
       end
     end
 

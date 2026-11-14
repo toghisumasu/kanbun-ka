@@ -14,6 +14,8 @@ class KanbunTranslatorService
     :skeleton,     # SkeletonBuilder出力（デバッグ用）
     :fallback,     # true = BNFパース失敗でLLM全文委譲
     :parse_error,  # nil = 訓点付与に成功 / 文字列 = Raccパーサーが解析できなかった理由
+    :kakikudashi_exact,   # true = 書き下しは確かな読み（復文検査を通り、曖昧でない）。false なら kakikudashi は暫定出力
+    :kakikudashi_reasons, # exact:false の理由の一覧（空配列 = 理由なし）
     :retried,      # true = LLM の出力が白文でなかった（仮名混じりなど）ため 1 回だけ再生成した
     keyword_init: true
   )
@@ -125,6 +127,8 @@ class KanbunTranslatorService
       hakubun:     hakubun,
       kunten:      kunten_result[:kunten],
       kakikudashi: kunten_result[:kakikudashi],
+      kakikudashi_exact:   kunten_result[:kakikudashi_exact],
+      kakikudashi_reasons: kunten_result[:kakikudashi_reasons],
       skeleton:    skeleton,
       fallback:    fallback,
       parse_error: kunten_result[:error],

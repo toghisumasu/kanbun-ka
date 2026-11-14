@@ -41,6 +41,17 @@ RSpec.describe KanbunTranslatorService do
 
   subject(:result) { described_class.call("私は林檎を食べる") }
 
+  describe "書き下しの確かさ（exact・reasons）は呼び出し側にも返る（Phase 5b S7）" do
+    it "exact:false と reasons を Result に載せる" do
+      allow(KanbunParserService).to receive(:call).with("我食林檎").and_return(
+        { kunten: "我[レ]食林檎", kakikudashi: "我林檎食", kakikudashi_exact: false,
+          kakikudashi_reasons: ["他動詞＋於A は受身か能動か決まりません: 食於林檎"] }
+      )
+      expect(result.kakikudashi_exact).to be false
+      expect(result.kakikudashi_reasons).to eq ["他動詞＋於A は受身か能動か決まりません: 食於林檎"]
+    end
+  end
+
   describe "正常系: BNFパースが成功する場合" do
     it "白文が返る" do
       expect(result.hakubun).to eq "我食林檎"

@@ -117,3 +117,13 @@ S2 で検査項目を 4 つに絞った際、phase5a の `Yomi.fukubun_problems`
   1. 「之」は辞書上 実字（NOUN）なので、之の欠落は「機能語の欠落」ではなく「字の欠落: 之」で検出される（spec はそれに合わせた）。機能語の欠落の理由が出るのは 不・者・所 など CONTENT_TOKENS 以外の語。
   2. `exact_wide_report.rb` の対象が 355→357 文なのは、S6 の正例 spec が文を足したため。
 - 検証：spec 先行（赤 7 件→緑）。RSpec 722 件・0 失敗・pending 25（増減なし）、Racc conflict 0、ベンチ 一致率 48/50・exact:true 41/50（減った文 0、導入前後で同じ）、ベンチ外：違反は故郷何独在長安 1 件のまま。
+
+## S7 曖昧な受身を暫定出力に統一する
+
+- 実装：`KanbunParserService#kakikudashi` の分岐を 1 か所だけ変更。復文検査の違反と Yomi の曖昧（`ambiguities`）をまとめて `problems` とし、あれば暫定出力（`interim`）＋ reasons、なければ Yomi の書き下し・exact:true・理由なし。`Yomi::Result#exact?` は Service からは使わなくなった（Yomi 側には残す）。
+- 殺於敵・為敵殺・学於人 は暫定出力（例：殺於敵 → 「敵殺」）・exact:false・理由つき。確定した受身（彼為敵所殺・見殺・被殺於敵）は書き下しのまま exact:true、理由は空。
+- 計画から外れた点（reasons の経路）：
+  1. この Rails アプリには画面（controller/view）も HTTP API（routes）もない。呼び出し経路は `KanbunParserService.call` と `KanbunTranslatorService.call`（→ `script/kanbun_repl.rb`）だけである。
+  2. 確認の結果、`KanbunTranslatorService::Result` は `kakikudashi_exact`・`kakikudashi_reasons` を**捨てていた**（phase5a から）。reasons が呼び出し側に届かないので、`Result` に 2 フィールドを足して通した（spec 先行）。`kanbun_repl.rb` は暫定のとき「（暫定）」と理由を表示するようにした。
+  3. `kanbun_translator_service_jp.rb`（旧版の同名クラス定義）には触れていない。
+- 検証：spec 先行（赤 5 件→緑）。RSpec 726 件・0 失敗・pending 25（増減なし）、Racc conflict 0、ベンチ 一致率 48/50・exact:true 41/50（減った文 0、導入前後で同じ）。実際の呼び出し：`KanbunParserService.call("殺於敵")` → 「敵殺」・exact:false・理由あり、`彼為敵所殺` → 書き下し・exact:true。`kanbun_repl.rb`（実 Ollama・MeCab）で「彼は敵に殺された」→ 白文 彼殺於敵 → 「彼敵殺（暫定）」＋理由行を表示、「私は漢文を読む」→ 書き下し（理由なし）。

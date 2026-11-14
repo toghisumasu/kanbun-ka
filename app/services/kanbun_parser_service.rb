@@ -63,13 +63,15 @@ class KanbunParserService
   # [書き下し, 確かな読みか, 理由の一覧]
   #   exact ＝ Yomi が読みを 1 つに決めている（曖昧な句形でない）かつ 復文検査（Kanbun::Fukubun）の違反ゼロ。
   #   復文検査に違反があれば暫定の書き下し（漢字を読み順に並べたもの）に戻し、違反を理由に返す。
-  #   曖昧な句形は Yomi の書き下しを返すが exact にせず、曖昧な理由を返す。止めずに警告つきで返す。
+  #   曖昧な句形（殺於敵など）も同じく暫定の書き下しに戻し、曖昧な理由を返す（誤読かもしれない読みを返さない）。
+  #   どちらも止めずに、暫定出力と理由を返す。
   def kakikudashi(tree, aozora)
     result = Kanbun::Yomi.analyze(tree)
     violations = Kanbun::Fukubun.check(tree, result.text, parts: result.parts)
-    return [interim(aozora), false, violations] unless violations.empty?
+    problems = violations + result.ambiguities
+    return [interim(aozora), false, problems] unless problems.empty?
 
-    [result.text, result.exact?, result.ambiguities]
+    [result.text, true, []]
   rescue Kanbun::Yomi::MissingEntry => e
     [interim(aozora), false, [e.message]]
   end
