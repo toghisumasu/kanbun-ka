@@ -29,4 +29,12 @@ RSpec.describe Kanbun::Lexicon do
     expect(saidoku_words.sort).to eq Kanbun::Lexicon::SAIDOKU.keys.sort
     expect(saidoku_words.size).to eq 8
   end
+
+  it "置き字は Lexicon::OKIJI で定義される（復文検査が参照する）" do
+    expect(Kanbun::Lexicon::OKIJI).to contain_exactly("於", "于", "矣", "焉", "而")
+  end
+
+  it "実字のトークンに助字・再読文字は含まれない" do
+    expect(Kanbun::Lexicon::CONTENT_TOKENS).to contain_exactly(:NOUN, :VERB, :VERB_I, :ADJ, :ADV)
+  end
 end

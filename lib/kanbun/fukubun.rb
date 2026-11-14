@@ -1,0 +1,100 @@
+# frozen_string_literal: true
+
+# 復文検査（Phase 5b S2）。白文（構文木）と書き下しを比べ、矛盾を理由の配列で返す。
+#
+#   白文 → 構文木 → 返り点（Kunten）→ 読む順（Reorder）  ┐
+#                                                          ├→ 比較 → 違反の理由（なければ []）
+#   書き下し（Yomi など、どこで作ったものでもよい）        ┘
+#
+# 検査する 4 項目
+#   1. 実字（名詞・動詞・形容詞・副詞）の漢字が全部残っている（置き字は数えない）
+#   2. 再読文字が 2 度出る（1 度目の漢字と、2 度目の読み）
+#   3. 返り点を適用した順（Kanbun::Reorder）と、書き下しの実字の並びが一致する
+#   4. 字の重複がない
+#
+# 書き下しを作る側（Yomi）の自己申告ではなく、白文と書き下しだけから判定する。
+# 助詞・活用の正しさは見ない。語の取りこぼし・重複・順序の取り違えを検出する検査である。
+#
+# 置き字・実字の定義は Lexicon（OKIJI_TOKENS・CONTENT_TOKENS）。ここには持たない。
+
+require_relative 'tree'
+require_relative 'lexicon'
+require_relative 'kunten'
+require_relative 'reorder'
+
+module Kanbun
+  module Fukubun
+    module_function
+
+    # 見V の 見 は受身の助動詞（殺さる）で、漢字は書き下しに出ない。実字に数えない。
+    FUNCTION_ROLES = %i[ukemi_mi].freeze
+
+    # tree: 白文の構文木（KanbunParser#parse_tree の結果）／kakikudashi: 書き下し（String）
+    # 戻り値: 違反の理由（String）の配列。違反がなければ空。
+    def check(tree, kakikudashi)
+      leaves = leaves_of(tree)
+      jitsuji = jitsuji_chars(leaves)
+      units = Kunten.annotate(tree)
+      expected = Reorder.reorder(units).reject { |u| silent?(u) }.map(&:kanji).select { |c| jitsuji.include?(c) }
+      actual = kakikudashi.each_char.select { |c| jitsuji.include?(c) }
+
+      reasons = count_reasons(jitsuji, expected, actual)
+      reasons << order_reason(expected, actual) if reasons.empty? && expected != actual
+      reasons.concat(saidoku_reasons(leaves, kakikudashi))
+      reasons.compact
+    end
+
+    # 実字の字（読まない置き字・機能語・受身の 見 は含まない）
+    def jitsuji_chars(leaves)
+      leaves.select { |leaf| jitsuji?(leaf) }.flat_map { |leaf| leaf.surface.each_char.to_a }.uniq
+    end
+
+    def jitsuji?(leaf)
+      token = Lexicon::TABLE[leaf.surface]
+      !leaf.silent? && !FUNCTION_ROLES.include?(leaf.role) &&
+        Lexicon::CONTENT_TOKENS.include?(token) && !Lexicon::OKIJI_TOKENS.include?(token)
+    end
+
+    # 1・4: 字ごとの出現回数を比べる
+    def count_reasons(jitsuji, expected, actual)
+      jitsuji.flat_map do |c|
+        e = expected.count(c)
+        a = actual.count(c)
+        if a < e then ["字の欠落: #{c}"]
+        elsif a > e then ["字の重複: #{c}"]
+        else []
+        end
+      end
+    end
+
+    # 3: 回数が合っているのに順序が違う
+    def order_reason(expected, actual)
+      "読み順の不一致: 期待 #{expected.join} / 実際 #{actual.join}"
+    end
+
+    # 2: 再読文字は、1 度目の漢字のあとに 2 度目の読み（Lexicon::SAIDOKU の saidoku）が続く
+    def saidoku_reasons(leaves, kakikudashi)
+      leaves.select(&:saidoku?).map(&:surface).uniq.filter_map do |c|
+        stem = Lexicon::SAIDOKU.fetch(c)[:saidoku].tr('ァ-ヶ', 'ぁ-ゖ')
+        idx = kakikudashi.index(c)
+        next "再読文字が2度出ていない: #{c}" if idx.nil? || !kakikudashi[(idx + 1)..].to_s.include?(stem)
+      end
+    end
+
+    # ---- 内部 ----
+    def leaves_of(node)
+      case node
+      when Tree::Leaf then [node]
+      when Tree::Seq then node.children.flat_map { |c| leaves_of(c) }
+      when Tree::Ret then leaves_of(node.head) + node.block.flat_map { |c| leaves_of(c) }
+      else []
+      end
+    end
+
+    def silent?(unit)
+      unit.yomi&.hidden? && unit.yomi.text.empty?
+    end
+
+    private_class_method :leaves_of, :silent?
+  end
+end

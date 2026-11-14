@@ -65,6 +65,14 @@ module Kanbun
       '盍' => { yomi: 'なん', okuri: 'ゾ', saidoku: 'ざ', saidoku_okuri: 'ル' }      # なんゾ…ざる
     }.freeze
 
+    # 置き字のトークン（読まない字。補語マーカー・文末の矣・焉・接続の而）。復文検査（Kanbun::Fukubun）が参照する。
+    # 乎 は補語位置では置き字（PREP）、文末では読む助字（SHI_KO）。構文木の葉の silent で最終的に決まる。
+    OKIJI_TOKENS = %i[PREP SHI_I SHI_EN ER].freeze
+    OKIJI = FUNCTION_WORDS.select { |_, token| OKIJI_TOKENS.include?(token) }.keys.freeze
+
+    # 実字（漢字が書き下しに必ず残る語）のトークン。助字・助動詞・句法の字は含まない。
+    CONTENT_TOKENS = %i[NOUN VERB VERB_I ADJ ADV].freeze
+
     # 1 字の内容語（従来の VERBS / NOUNS をそのまま移した。回帰を避けるため中身は変えない）
     VERBS = %w[学 読 書 見 聞 知 行 食 飲 思 言 得 入 為 陥 慎 争 賢 有 笑
                植 買 戚 易 施 成 還 去 帰 習 敏 説 在 好
