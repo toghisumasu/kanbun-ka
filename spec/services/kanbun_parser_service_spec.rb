@@ -34,15 +34,47 @@ RSpec.describe KanbunParserService do
         result = described_class.call(hakubun)
         expect(result[:status]).to eq(:parsed), hakubun
         expect(result[:kakikudashi_exact]).to be(false), hakubun
-        expect(result[:kakikudashi_notes]).not_to be_empty, hakubun
+        expect(result[:kakikudashi_reasons]).not_to be_empty, hakubun
         expect(result[:kakikudashi]).not_to eq(hakubun), hakubun
+      end
+    end
+
+    describe "exact は 復文検査（Kanbun::Fukubun）の結果で決まる（Phase 5b S3）" do
+      let(:broken) { Kanbun::Yomi::Result.new("我は読む", []) } # 漢文 が欠落した書き下し
+
+      it "Yomi が確信していても、復文検査に違反があれば exact にしない" do
+        allow(Kanbun::Yomi).to receive(:analyze).and_return(broken)
+        result = described_class.call("我読漢文")
+        expect(result[:status]).to eq :parsed
+        expect(result[:kakikudashi_exact]).to be false
+        expect(result[:kakikudashi_reasons]).to include("字の欠落: 漢", "字の欠落: 文")
+      end
+
+      it "違反があれば暫定の書き下し（漢字を読み順に並べたもの）に戻す" do
+        allow(Kanbun::Yomi).to receive(:analyze).and_return(broken)
+        expect(described_class.call("我読漢文")[:kakikudashi]).to eq "我漢文読"
+      end
+
+      it "違反がなく Yomi が確信していれば exact（検査の結果が理由なしで通る）" do
+        result = described_class.call("我読漢文")
+        expect(result[:kakikudashi_exact]).to be true
+        expect(result[:kakikudashi_reasons]).to eq []
+        tree = KanbunParser.new.parse_tree("我読漢文", strict: true)
+        expect(Kanbun::Fukubun.check(tree, result[:kakikudashi])).to eq []
+      end
+
+      it "Yomi が曖昧と申告したときは、検査に通っても exact にしない（書き下しは返す）" do
+        result = described_class.call("殺於敵")
+        expect(result[:kakikudashi_exact]).to be false
+        expect(result[:kakikudashi_reasons]).to include(a_string_matching(/受身か能動か/))
+        expect(result[:kakikudashi]).to eq "敵に殺す"
       end
     end
 
     it "確かに読める句は exact で、理由は空" do
       result = described_class.call("我読漢文")
       expect(result[:kakikudashi_exact]).to be true
-      expect(result[:kakikudashi_notes]).to eq []
+      expect(result[:kakikudashi_reasons]).to eq []
     end
 
     it "読みの辞書にない語を含むときは、暫定の書き下し（漢字を読み順に並べたもの）に戻し、exact を false にする" do

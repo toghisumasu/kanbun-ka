@@ -22,3 +22,14 @@
   2. 項目 4（重複）は、項目 1 と同じ「字ごとの出現回数」の比較の片側（多い方）として実装した。
   3. 置き字の「除外」は、置き字が `CONTENT_TOKENS` に入らないことで実現している。置き字が書き下しに**出ていること**は検査しない（指示の 4 項目外。累加の「、而も」のように読む而もあるため）。phase5a の `Yomi` にあった置き字検査は S3 で Fukubun に置き換える。
 - 検証：spec 先行（赤＝モジュールなし）。正例 28 文（既存の固定文）が違反なし、欠落・重複・字順入れ替え・再読文字の欠けを検出。RSpec 709 件、conflict 0。
+
+## S3 Service への組み込み
+
+- 実装：`KanbunParserService` が `Kanbun::Fukubun.check` を呼び、**exact ＝ Yomi が読みを 1 つに決めている（曖昧でない）かつ 復文検査の違反ゼロ**。返り値のキーは `kakikudashi_exact`・`kakikudashi_reasons`（phase5a の `kakikudashi_notes` から改名）。`Yomi` からは自己検査（`fukubun_problems` など）を取り除き、`Yomi::Result` は `text`・`ambiguities` だけにした。
+- S3 だけを戻せば S2（`Fukubun` 単体）が残る単位：S3 のコミットは Service・Yomi・それらの spec だけに触れ、`fukubun.rb`・`lexicon.rb` の追加は S2 に入っている。
+- 解釈した点（要確認）：「exact:false のときは暫定出力に警告を付けて返す」を、次のように区別した。
+  - **復文検査の違反**：Yomi の書き下しが壊れていると判明しているので、暫定の書き下し（`Kakikudashi.convert`＝漢字を読み順に並べたもの）に戻し、違反を reasons に返す。
+  - **曖昧な句形**（殺於敵など）：書き下し自体は読みの 1 つとして妥当なので、Yomi の書き下し（敵に殺す）を返し、曖昧な理由を reasons に付けて exact:false。
+  - どちらも暫定出力にする場合は `kakikudashi` の分岐 1 行の変更で済む。
+- 辞書にない語（MissingEntry）は従来どおり暫定の書き下し＋理由。
+- 検証：spec 先行（赤 6 件→緑）。復文検査の違反を stub で作り、exact:false・暫定出力・理由の返却を確認。RSpec 585 件（phase5a の 25 件スキップ込みの 709 から、Yomi の自己検査 spec を削除した分が減）、conflict 0。

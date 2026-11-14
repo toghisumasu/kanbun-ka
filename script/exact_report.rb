@@ -15,5 +15,5 @@ rows.each do |line|
   hakubun = line.split("\t")[1]
   r = KanbunParserService.call(hakubun)
   puts [r[:kakikudashi_exact] ? "EXACT" : "-----", hakubun, r[:kakikudashi],
-        Array(r[:kakikudashi_notes]).join(" / "), r[:error]].join("\t")
+        Array(r[:kakikudashi_reasons]).join(" / "), r[:error]].join("\t")
 end

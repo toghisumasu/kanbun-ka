@@ -1,6 +1,5 @@
 require "rails_helper"
 require Rails.root.join("lib/kanbun/kanbun_parser.tab").to_s
-require Rails.root.join("lib/kanbun/kunten").to_s
 require Rails.root.join("lib/kanbun/yomi").to_s
 
 # 構文木 → 書き下し（歴史的仮名遣い）。Phase 5a M6。
@@ -72,58 +71,6 @@ RSpec.describe Kanbun::Yomi do
     it "読みの辞書にない語は MissingEntry" do
       tree = KanbunParser.new.parse_tree("寧為無為", strict: true)
       expect { described_class.kakikudashi(tree) }.to raise_error(Kanbun::Yomi::MissingEntry)
-    end
-  end
-
-  describe "復文の検査（書き下しが白文と矛盾しないか）" do
-    def analyze(hakubun)
-      tree = KanbunParser.new.parse_tree(hakubun, strict: true)
-      reading = Kanbun::Kunten.reading(Kanbun::Kunten.annotate(tree))
-      described_class.analyze(tree, reading: reading)
-    end
-
-    # 辞書の範囲で書き下せる白文はすべて、検査に通る（ベンチの期待白文と、この spec の全句）
-    corpus = File.readlines(Rails.root.join("script/bench_expected.tsv"), chomp: true)
-                 .reject { |l| l.strip.empty? || l.start_with?("#") }
-                 .flat_map { |l| l.split("\t")[1..] }
-    corpus += %w[未知 将行 当学 応知 宜学 須学 猶不及 盍行 不得不知 不可不学於師 非徒無益而又害之
-                 彼為敵所殺 被殺 其疾如風 人生如夢 人莫若友 人不如友 学而不行 行而学矣 入於深林焉
-                 問礼於老子 不亦説乎 若不学則愚 無不知者 不知非恥]
-    corpus.uniq.each do |hakubun|
-      it "#{hakubun} は復文検査に通る（書けないものは MissingEntry か解析不可）" do
-        result = analyze(hakubun)
-        expect(result.problems).to be_empty
-      rescue Kanbun::Yomi::MissingEntry, Racc::ParseError, KanbunParser::UnknownCharacters
-        skip "書き下しの対象外"
-      end
-    end
-
-    it "読む順が返り点と食い違えば検出する" do
-      tree = KanbunParser.new.parse_tree("我読漢文", strict: true)
-      result = described_class.analyze(tree, reading: "我読漢文")
-      expect(result.problems.join).to include("読む順")
-    end
-
-    it "置き字が書き下しに出ていれば検出する" do
-      tree = KanbunParser.new.parse_tree("学焉", strict: true)
-      item = described_class.collect(tree).last
-      expect(described_class.item_problems(item, "ここに")).to include(a_string_matching(/置き字 焉/))
-      expect(described_class.item_problems(item, "")).to be_empty
-    end
-
-    it "実字の漢字が書き下しから落ちていれば検出する" do
-      tree = KanbunParser.new.parse_tree("我読漢文", strict: true)
-      items = described_class.collect(tree)
-      expect(described_class.item_problems(items.last, "よむ")).to include(a_string_matching(/実字 読/))
-      expect(described_class.item_problems(items.last, "")).to include(a_string_matching(/落ちて/))
-    end
-
-    it "再読文字の 1 度目と 2 度目が対になっていなければ検出する" do
-      tree = KanbunParser.new.parse_tree("未知", strict: true)
-      items = described_class.collect(tree)
-      items.pop
-      out = items.map { "x" }
-      expect(described_class.fukubun_problems(items, out, nil)).to include(a_string_matching(/対になっていません/))
     end
   end
 

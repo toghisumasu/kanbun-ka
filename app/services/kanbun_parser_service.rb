@@ -20,13 +20,14 @@ require Rails.root.join("lib/kanbun/kanbun_parser.tab").to_s
 require Rails.root.join("lib/kanbun/kunten").to_s
 require Rails.root.join("lib/kanbun/kakikudashi").to_s
 require Rails.root.join("lib/kanbun/yomi").to_s
+require Rails.root.join("lib/kanbun/fukubun").to_s
 
 class KanbunParserService
   # 返り値
   #   kunten:        訓点付き漢文（返り点を [ ] で付記。例: 我読[二]漢文[一]）
   #   kakikudashi:   書き下し文（歴史的仮名遣い）。kakikudashi_exact が false のときは暫定（漢字を読み順に並べただけ）
-  #   kakikudashi_exact: 確かな読みか（Yomi で書き下せて、復文検査に通り、曖昧な句形でない）
-  #   kakikudashi_notes: exact でない理由（辞書にない語・復文検査の不一致・曖昧な句形）
+  #   kakikudashi_exact: 確かな読みか（Yomi が読みを決められ、かつ復文検査 Kanbun::Fukubun の違反がゼロ）
+  #   kakikudashi_reasons: exact でない理由（辞書にない語・復文検査の不一致・曖昧な句形）
   #   kunten_aozora: 注記つき漢文（正本。Kanbun::Aozora.parse で読み戻せる）
   #   status:        :parsed または :unparsed
   #   error:         nil または解析できなかった理由（文字列）
@@ -43,12 +44,12 @@ class KanbunParserService
     units = Kanbun::Kunten.annotate(tree)
     aozora = Kanbun::Kunten.to_aozora(units)
 
-    kaki, exact, notes = kakikudashi(tree, aozora, Kanbun::Kunten.reading(units))
+    kaki, exact, reasons = kakikudashi(tree, aozora)
     {
       kunten:        Kanbun::Kunten.to_bracket(units),
       kakikudashi:   kaki,
       kakikudashi_exact: exact,
-      kakikudashi_notes: notes,
+      kakikudashi_reasons: reasons,
       kunten_aozora: aozora,
       status:        :parsed,
       error:         nil
@@ -60,13 +61,21 @@ class KanbunParserService
   private
 
   # [書き下し, 確かな読みか, 理由の一覧]
-  #   確かな読み＝読みの辞書で書き下せて、復文検査に通り、曖昧な句形でないこと。
-  #   曖昧な句形・復文検査の不一致は、書き下しは返すが exact にしない。辞書にない語は暫定の書き下しに戻す。
-  def kakikudashi(tree, aozora, reading)
-    result = Kanbun::Yomi.analyze(tree, reading: reading)
-    [result.text, result.exact?, result.problems + result.ambiguities]
+  #   exact ＝ Yomi が読みを 1 つに決めている（曖昧な句形でない）かつ 復文検査（Kanbun::Fukubun）の違反ゼロ。
+  #   復文検査に違反があれば暫定の書き下し（漢字を読み順に並べたもの）に戻し、違反を理由に返す。
+  #   曖昧な句形は Yomi の書き下しを返すが exact にせず、曖昧な理由を返す。止めずに警告つきで返す。
+  def kakikudashi(tree, aozora)
+    result = Kanbun::Yomi.analyze(tree)
+    violations = Kanbun::Fukubun.check(tree, result.text)
+    return [interim(aozora), false, violations] unless violations.empty?
+
+    [result.text, result.exact?, result.ambiguities]
   rescue Kanbun::Yomi::MissingEntry => e
-    [Kanbun::Kakikudashi.convert(aozora, yomi: false, hiragana: true), false, [e.message]]
+    [interim(aozora), false, [e.message]]
+  end
+
+  def interim(aozora)
+    Kanbun::Kakikudashi.convert(aozora, yomi: false, hiragana: true)
   end
 
   def unparsed(error)
@@ -74,7 +83,7 @@ class KanbunParserService
       kunten:        @hakubun,
       kakikudashi:   @hakubun,
       kakikudashi_exact: false,
-      kakikudashi_notes: [],
+      kakikudashi_reasons: [],
       kunten_aozora: nil,
       status:        :unparsed,
       error:         "#{error.class.name.split('::').last}: #{error.message}"
