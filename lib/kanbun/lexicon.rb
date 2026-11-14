@@ -26,6 +26,8 @@ module Kanbun
     # 機能語（句法のトークン）。表層形 → トークン名。
     FUNCTION_WORDS = {
       '不亦' => :FUKI_MATA,
+      # 二重否定②（Phase 5a M1）。3 字 1 トークンにして、不得|不知 と読まれる誤りを塞ぐ
+      '不得不' => :DNEG_TOKU, '不可不' => :DNEG_KA,
       '何為' => :GI_NANSURU, '何以' => :GI_NANMOTE,
       '何如' => :GI_IKANI_A, '如何' => :GI_IKANI_B,
       '莫如' => :MOKU_NAKU,  '莫若' => :MOKU_SHIKA,

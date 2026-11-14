@@ -7,6 +7,7 @@ token NEG_BU NEG_FU NEG_HI NEG_MU NEG_BAKU
       HITSZU JOU MATA        # 必・常・復（部分否定用）
       MOKU_NAKU MOKU_SHIKA
       FUSHIKA FUNYUU
+      DNEG_TOKU DNEG_KA
       YO_NIMO  NAMU IWA_N_YA
       KATEN_SHIKA KATEN_NYO KATEN_IYA
       KATEN_IEDOMO KATEN_TATOI
@@ -112,6 +113,8 @@ rule
     | NEG_HI NEG_BU verb_phrase { result = ret(lf('非'), ret(lf('不'), val[2])) }
     | NEG_MU NEG_BU verb_phrase SHA { result = ret(lf('無'), ret(lf('不'), val[2]), lf('者')) }   # 無不飲者（Phase 4o）
     | NEG_MU SHO    verb_phrase     { result = ret(lf('無'), ret(lf('所'), val[2])) }              # 無所知（Phase 4o）
+    | DNEG_TOKU verb_phrase { result = ret(lf('不'), ret(lf('得'), ret(lf('不'), val[1]))) }   # 不得不知（Phase 5a M1）
+    | DNEG_KA   verb_phrase { result = ret(lf('不'), ret(lf('可'), ret(lf('不'), val[1]))) }   # 不可不行（Phase 5a M1）
 
   # ---- 部分否定句法 ----
   # 不必〜：必ずしも〜ではない  不常〜：いつも〜とは限らない  不復〜：二度と〜しない
