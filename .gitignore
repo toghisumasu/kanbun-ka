@@ -38,3 +38,6 @@ vendor/bundle/
 
 # racc 生成物
 *.output
+
+# 手元のみの字のリスト（調査3。リポジトリには入れない）
+/docs/kanji91.tsv
