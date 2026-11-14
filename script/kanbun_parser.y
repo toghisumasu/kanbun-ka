@@ -93,7 +93,7 @@ rule
   # 為A V（所なし）は受身としては通さない。
   passive_clause
     : UKE_I NOUN SHO verb_phrase { result = ret(lf('為', false, :ukemi), lf(val[1]), ret(lf('所', false, :ukemi_sho), val[3])) }
-    | PASS_HI verb_phrase        { result = ret(lf(val[0]), val[1]) }
+    | PASS_HI verb_phrase        { result = ret(lf(val[0]), Kanbun::Tree.clear_ambiguous!(val[1])) }   # 被V於A は受身が確定
 
   # ---- 条件「AなればB」の則（Phase 4m）。若〜則〜 は katen_clause が先に受ける ----
   sokuclause
@@ -186,8 +186,8 @@ rule
     | NOUN ADV pred_tr         { result = seq(lf(val[0]), lf(val[1]), val[2]) }  # 人皆食林檎
     | ADV pred_tr              { result = seq(lf(val[0]), val[1]) }      # 亦学道
     | ADV pred_in              { result = seq(lf(val[0]), val[1]) }      # 皆死
-    | pred_obj pred_tr         { result = seq(val[0], val[1]) }          # 連動 飲茶読書（茶を飲みて書を読む）
-    | NOUN pred_obj pred_tr    { result = seq(lf(val[0]), val[1], val[2]) }  # 私飲茶読書
+    | pred_obj pred_tr         { result = amb_wei(val[0], seq(val[0], val[1])) }   # 連動 飲茶読書（茶を飲みて書を読む）。為A V は受身かもしれない
+    | NOUN pred_obj pred_tr    { result = amb_wei(val[1], seq(lf(val[0]), val[1], val[2])) }  # 私飲茶読書
     | NOUN NOUN pred_tr        { result = seq(lf(val[0]), lf(val[1]), val[2]) }  # 春夜洛城聞笛（Phase 4h）
     | NOUN NOUN pred_obj pred_tr { result = seq(lf(val[0]), lf(val[1]), val[2], val[3]) }  # 遺愛寺鐘欹枕聴
     | NOUN NOUN ADV pred_tr    { result = seq(lf(val[0]), lf(val[1]), lf(val[2]), val[3]) }  # 誰家玉笛暗飛声
@@ -210,7 +210,9 @@ rule
   pred_tr
     : VERB                     { result = lf(val[0]) }
     | VERB VERB                { result = ret(lf(val[0], false, (val[0] == '見' ? :ukemi_mi : nil)), lf(val[1])) }                   # 前の動詞が返って読む（暫定）
-    | VERB PREP NOUN           { result = ret(lf(val[0]), lf(val[1], true), lf(val[2])) } # ③ 置字つき補語
+    | VERB PREP NOUN           { node = ret(lf(val[0]), lf(val[1], true), lf(val[2]))
+                                 result = Kanbun::Lexicon::LOCATIVE_VERBS.include?(val[0]) ? node :
+                                          amb(node, "他動詞＋於A は受身か能動か決まりません: #{val.join}") } # ③ 置字つき補語（殺於敵）
     | pred_obj                 { result = val[0] }
 
   # 目的語・補語を取る述語（連動の前半にもなる）
@@ -372,6 +374,19 @@ end
 def ruika(word, body)
   neg, adv = word.each_char.to_a
   ret(lf(neg, false, :ruika_neg), lf(adv, false, :ruika_adv), body)
+end
+
+# 読みが決まらない節点に理由を付ける（Kanbun::Tree.ambiguities で集める）
+def amb(node, reason)
+  node.ambiguous = reason
+  node
+end
+
+# 為A V（所なし）。連動として通るが、受身かもしれない。
+def amb_wei(first, whole)
+  return whole unless first.is_a?(Kanbun::Tree::Ret) && first.head.surface == '為' && first.head.role.nil?
+
+  amb(whole, "為A V（所なし）は受身か連動か決まりません: #{whole}")
 end
 
 def seq(*nodes)

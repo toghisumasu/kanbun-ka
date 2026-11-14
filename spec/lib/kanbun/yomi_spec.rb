@@ -141,12 +141,8 @@ RSpec.describe Kanbun::Yomi do
       expect(ambiguous("為敵殺")).to include(a_string_matching(/所なし/))
     end
 
-    it "見V は受身か Vを見る か決まらない" do
-      expect(ambiguous("見殺")).to include(a_string_matching(/見V/))
-    end
-
     it "意味の決まる句は曖昧としない（目的語つきの於・為A所B・被V・自動詞＋於）" do
-      %w[兄釣魚於海 問礼於老子 彼為敵所殺 被殺 氷冷於水 入於深林 我読漢文].each do |s|
+      %w[兄釣魚於海 問礼於老子 彼為敵所殺 被殺 見殺 氷冷於水 入於深林 我読漢文].each do |s|
         expect(ambiguous(s)).to be_empty, s
       end
     end

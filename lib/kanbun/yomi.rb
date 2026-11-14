@@ -185,35 +185,10 @@ module Kanbun
     end
 
     # ---- 曖昧な句形 ----
-    # 文法だけでは読みが決まらず、辞書の既定の読みを選んでいるもの。exact とは名乗らせない。
-    #   - 他動詞＋於A（目的語なし）：殺於敵 は 敵に殺さる（受身）か 敵に殺す か
-    #   - 為A V（所なし）：連動の読みで通るが、受身かもしれない
-    #   - 見V：殺さる（受身）か Vを見る か
+    # 読みが 1 つに決まらない構文は、パーサーが木に ambiguous を付けてある（Kanbun::Tree.ambiguities）。
+    # 受身が確定している形（見V・被V・為A所B）には付かない。
     def ambiguities(tree)
-      found = []
-      scan_ambiguities(tree, found)
-      found.uniq
-    end
-
-    def scan_ambiguities(node, found)
-      case node
-      when Tree::Seq
-        node.children.each_with_index do |c, i|
-          if c.is_a?(Tree::Ret) && c.head.surface == '為' && c.head.role.nil? && node.children[i + 1]
-            found << "為A V（所なし）は受身かもしれません: #{c}#{node.children[i + 1]}"
-          end
-          scan_ambiguities(c, found)
-        end
-      when Tree::Ret
-        h = node.head
-        found << "見V は受身（Vさる）か Vを見る か決まりません: #{node}" if h.role == :ukemi_mi
-        first = node.block.first
-        if first.is_a?(Tree::Leaf) && first.silent? && VERBS.key?(h.surface) && h.role.nil? &&
-           VERBS[h.surface][:obj] == 'を'
-          found << "他動詞＋於A は受身か能動か決まりません: #{node}"
-        end
-        node.block.each { |c| scan_ambiguities(c, found) }
-      end
+      Tree.ambiguities(tree)
     end
 
     # ---- 読む順の語列を作る（再読文字は 2 度、1 度目と 2 度目）----

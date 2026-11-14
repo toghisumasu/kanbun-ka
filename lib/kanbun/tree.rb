@@ -17,11 +17,39 @@
 
 module Kanbun
   module Tree
+    # 構文の読みが 1 つに決まらないとき、パーサーがその節点に理由（文字列）を付ける（Phase 5b）。
+    # Yomi は ambiguous な木を exact とは名乗らない。返り点には影響しない。
+    module Ambiguous
+      attr_accessor :ambiguous
+    end
+
+    # 木の中の ambiguous をすべて外す（受身が確定する被の内側など）。
+    def self.clear_ambiguous!(node)
+      node.ambiguous = nil
+      case node
+      when Seq then node.children.each { |c| clear_ambiguous!(c) }
+      when Ret then (node.block + [node.head]).each { |c| clear_ambiguous!(c) }
+      end
+      node
+    end
+
+    # 木の中の ambiguous の理由を集める。
+    def self.ambiguities(node)
+      found = []
+      found << node.ambiguous if node.ambiguous
+      case node
+      when Seq then node.children.each { |c| found.concat(ambiguities(c)) }
+      when Ret then (node.block + [node.head]).each { |c| found.concat(ambiguities(c)) }
+      end
+      found.uniq
+    end
+
     # 1 語。surface は 1 字以上（深林・見聞のような辞書語は 1 つの Leaf）。
     # silent は置字（於・于・乎）：位置は占めるが読まない。
     # saidoku は再読文字（未・将・当…）の読みの表（Lexicon::SAIDOKU の値）。
     #   1 度目はその位置で、2 度目は Ret の head として返ってから読む。
     class Leaf
+      include Ambiguous
       # role は同じ字の用法を区別する印（書き下しの読みを選ぶためだけに使う。返り点には影響しない）。
       #   :hikyo（A如B）:compare/:compare_neg（莫如・不若）:ukemi/:ukemi_sho（為A所B）:ukemi_mi（見V）
       #   :dneg（不得不・不可不）:ruika_neg/:ruika_adv/:ruika_ji（非徒A而又B）
@@ -41,6 +69,7 @@ module Kanbun
 
     # 左から右へそのまま読む列。
     class Seq
+      include Ambiguous
       attr_reader :children
 
       def initialize(children)
@@ -52,6 +81,7 @@ module Kanbun
 
     # head を block より後で読む。head は Leaf（1 字以上）。
     class Ret
+      include Ambiguous
       attr_reader :head, :block
 
       def initialize(head, block)

@@ -28,8 +28,9 @@ RSpec.describe KanbunParserService do
       expect(described_class.call("未知")[:kakikudashi]).to eq "未だ知らず"
     end
 
-    it "曖昧な句形（殺於敵・為敵殺・見殺）は書き下しを返すが exact にせず、理由を添える" do
-      %w[殺於敵 為敵殺 見殺].each do |hakubun|
+    it "曖昧な句形（殺於敵・為敵殺）は書き下しを返すが exact にせず、理由を添える。見V は確定した受身なので exact" do
+      expect(described_class.call("見殺")[:kakikudashi_exact]).to be true
+      %w[殺於敵 為敵殺].each do |hakubun|
         result = described_class.call(hakubun)
         expect(result[:status]).to eq(:parsed), hakubun
         expect(result[:kakikudashi_exact]).to be(false), hakubun
