@@ -86,4 +86,52 @@ RSpec.describe Kanbun::Fukubun do
       expect(check("当学", "当に学ぶ")).to include("再読文字が2度出ていない: 当")
     end
   end
+
+  # phase5a の Yomi.fukubun_problems にあって S2 で落ちていた検査（S5 で復活）
+  describe "5. 置き字が書き下しに出ていない" do
+    it "焉 が出ていれば 置き字が書き下しに出ている: 焉" do
+      expect(check("学焉", "学び焉")).to include("置き字が書き下しに出ている: 焉")
+    end
+
+    it "於 が出ていれば検出する" do
+      expect(check("問礼於老子", "礼を於老子に問ふ")).to include("置き字が書き下しに出ている: 於")
+    end
+
+    it "矣・而 が出ていれば検出する" do
+      expect(check("行而学矣", "行きて学ぶ矣")).to include("置き字が書き下しに出ている: 矣")
+      expect(check("行而学矣", "行き而学ぶ")).to include("置き字が書き下しに出ている: 而")
+    end
+
+    it "置き字が出ていなければ違反なし（於・焉・而・矣）" do
+      expect(check("入於深林焉", "深林に入る")).to eq []
+      expect(check("行而学矣", "行きて学ぶ")).to eq []
+    end
+
+    it "累加の 而 は「、而も」と読むので、置き字として数えない" do
+      expect(check("非徒無益而又害之", "徒だに益無きのみに非ず、而も又た之を害ふ")).to eq []
+    end
+
+    it "与A・自A・従A は字を出さず助詞になる（置き字の違反にも欠落にもならない）" do
+      expect(check("与友飲酒而語", "友と酒を飲みて語る")).to eq []
+    end
+  end
+
+  # phase5a の yomi_spec にあった「ベンチの期待白文と固定文は、辞書の範囲で書き下せるものすべて検査に通る」
+  describe "正例：ベンチの期待白文と固定文（Yomi の書き下しに対して）" do
+    require Rails.root.join("lib/kanbun/yomi").to_s
+    corpus = File.readlines(Rails.root.join("script/bench_expected.tsv"), chomp: true)
+                 .reject { |l| l.strip.empty? || l.start_with?("#") }
+                 .flat_map { |l| l.split("\t")[1..] }
+    corpus += %w[未知 将行 当学 応知 宜学 須学 猶不及 盍行 不得不知 不可不学於師 非徒無益而又害之
+                 彼為敵所殺 被殺 其疾如風 人生如夢 人莫若友 人不如友 学而不行 行而学矣 入於深林焉
+                 問礼於老子 不亦説乎 若不学則愚 無不知者 不知非恥]
+    corpus.uniq.each do |hakubun|
+      it "#{hakubun} は復文検査に通る（書けないものは MissingEntry か解析不可）" do
+        tree = KanbunParser.new.parse_tree(hakubun, strict: true)
+        expect(described_class.check(tree, Kanbun::Yomi.analyze(tree).text)).to eq []
+      rescue Kanbun::Yomi::MissingEntry, Racc::ParseError, KanbunParser::UnknownCharacters
+        skip "書き下しの対象外"
+      end
+    end
+  end
 end

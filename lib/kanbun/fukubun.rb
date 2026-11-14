@@ -11,6 +11,7 @@
 #   2. 再読文字が 2 度出る（1 度目の漢字と、2 度目の読み）
 #   3. 返り点を適用した順（Kanbun::Reorder）と、書き下しの実字の並びが一致する
 #   4. 字の重複がない
+#   （S5 で追加）5. 置き字が書き下しに出ていない（累加の「、而も」は例外）
 #
 # 書き下しを作る側（Yomi）の自己申告ではなく、白文と書き下しだけから判定する。
 # 助詞・活用の正しさは見ない。語の取りこぼし・重複・順序の取り違えを検出する検査である。
@@ -41,6 +42,7 @@ module Kanbun
       reasons = count_reasons(jitsuji, expected, actual)
       reasons << order_reason(expected, actual) if reasons.empty? && expected != actual
       reasons.concat(saidoku_reasons(leaves, kakikudashi))
+      reasons.concat(okiji_reasons(leaves, kakikudashi))
       reasons.compact
     end
 
@@ -78,6 +80,16 @@ module Kanbun
         stem = Lexicon::SAIDOKU.fetch(c)[:saidoku].tr('ァ-ヶ', 'ぁ-ゖ')
         idx = kakikudashi.index(c)
         next "再読文字が2度出ていない: #{c}" if idx.nil? || !kakikudashi[(idx + 1)..].to_s.include?(stem)
+      end
+    end
+
+    # 5（phase5a の検査の復活）: 置き字（読まない字）が書き下しに出ていない。
+    # 例外は 累加の 而（:ruika_ji）で、「、而も」と読む。ほかに同じ字を読む語があれば、その分は許す。
+    def okiji_reasons(leaves, kakikudashi)
+      silent = leaves.select { |l| l.silent? && l.role != :ruika_ji }.flat_map { |l| l.surface.each_char.to_a }.uniq
+      silent.filter_map do |c|
+        allowed = leaves.count { |l| (!l.silent? || l.role == :ruika_ji) && l.surface.include?(c) }
+        "置き字が書き下しに出ている: #{c}" if kakikudashi.count(c) > allowed
       end
     end
 
