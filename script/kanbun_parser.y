@@ -8,7 +8,7 @@ token NEG_BU NEG_FU NEG_HI NEG_MU NEG_BAKU
       MOKU_NAKU MOKU_SHIKA
       FUSHIKA FUNYUU
       DNEG_TOKU DNEG_KA
-      UKE_I PASS_HI
+      UKE_I PASS_HI POSS RUIKA
       YO_NIMO  NAMU IWA_N_YA
       KATEN_SHIKA KATEN_NYO KATEN_IYA
       KATEN_IEDOMO KATEN_TATOI
@@ -43,6 +43,8 @@ rule
     : double_neg_clause  { result = val[0] }   # 二重否定
     | partial_neg_clause { result = val[0] }   # 部分否定
     | compare_clause     { result = val[0] }
+    | hikyo_clause       { result = val[0] }   # 比況 A如B（Phase 5a M5）
+    | ruika_clause       { result = val[0] }   # 累加 非徒A而又B（Phase 5a M5）
     | select_clause      { result = val[0] }
     | suppress_clause    { result = val[0] }
     | katen_clause       { result = val[0] }
@@ -178,6 +180,8 @@ rule
     | pred_in                  { result = val[0] }   # 述語のみ（自動詞・形容詞）
     | NOUN                     { result = lf(val[0]) }                   # 名詞だけ
     | NOUN NOUN                { result = seq(lf(val[0]), lf(val[1])) }  # ① 孔子聖人（名詞述語）
+    | POSS NOUN                { result = seq(lf(val[0]), lf(val[1])) }  # 其人（連体。Phase 5a M5）
+    | POSS pred_in             { result = seq(lf(val[0]), val[1]) }      # 其疾（其の疾きこと）
     | NOUN pred_tr             { result = seq(lf(val[0]), val[1]) }      # ②〜⑤ 我読漢文・返景入深林…
     | NOUN ADV pred_tr         { result = seq(lf(val[0]), lf(val[1]), val[2]) }  # 人皆食林檎
     | ADV pred_tr              { result = seq(lf(val[0]), val[1]) }      # 亦学道
@@ -229,6 +233,27 @@ rule
     | verb_phrase MOKU_SHIKA verb_phrase { result = seq(val[0], ret(lf('莫'), ret(lf('若'), val[2]))) }
     | verb_phrase FUSHIKA    verb_phrase { result = seq(val[0], ret(lf('不'), ret(lf('若'), val[2]))) }
     | verb_phrase FUNYUU     verb_phrase { result = seq(val[0], ret(lf('不'), ret(lf('如'), val[2]))) }
+
+  # 比況（A如B・A若B：AはBのごとし）。如 は B を読んでから返る（人如[レ]山）。
+  # 文頭の 如・若 は仮定（katen_clause）。先頭に何もない位置か、あとかで LR が区別する。
+  # 「学如不及」のように B が否定句のときも受ける。
+  hikyo_clause
+    : verb_phrase KATEN_NYO   hikyo_part { result = seq(val[0], ret(lf('如'), val[2])) }
+    | verb_phrase KATEN_SHIKA hikyo_part { result = seq(val[0], ret(lf('若'), val[2])) }
+
+  hikyo_part
+    : verb_phrase { result = val[0] }
+    | neg_clause  { result = val[0] }
+
+  # 累加（非徒・非唯・非独・不独 A 而 又 B）。非 と 徒 は別々の字として返り点を付ける。
+  #   非[二]徒無[レ]益[一]。下半分（而又B）は省ける。
+  ruika_clause
+    : RUIKA ruika_part                  { result = ruika(val[0], val[1]) }
+    | RUIKA ruika_part ER verb_phrase   { result = seq(ruika(val[0], val[1]), lf('而', true), val[3]) }
+
+  ruika_part
+    : verb_phrase { result = val[0] }
+    | neg_clause  { result = val[0] }
 
   # 選択句法（与A寧B・寧A無B）
   # 喪与易寧戚 → AせんよりはむしろB
@@ -341,6 +366,12 @@ end
 # 再読文字の葉。読みは Lexicon::SAIDOKU から引く。
 def lf_saidoku(surface)
   Kanbun::Tree::Leaf.new(surface, saidoku: Kanbun::Lexicon::SAIDOKU.fetch(surface))
+end
+
+# 累加：非徒・非唯・非独・不独 を 2 字に割って、非（不）を A のあとで返って読む。
+def ruika(word, body)
+  neg, adv = word.each_char.to_a
+  ret(lf(neg), lf(adv), body)
 end
 
 def seq(*nodes)

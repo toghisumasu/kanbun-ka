@@ -200,6 +200,30 @@ RSpec.describe Kanbun::Kunten do
     expect { units_for("被") }.to raise_error(Racc::ParseError)
   end
 
+  # Phase 5a M5: 比況（A如B）・累加（非徒A而又B）。
+  # 其疾如風・人生如夢・学如不及・非徒無益而又害之 は原典（論語・荘子・孟子）の句。
+  kunten_cases "比況・累加（Phase 5a M5）", [
+    %w[人如山 人如[レ]山 人山如], %w[人若山 人若[レ]山 人山若],
+    %w[人生如夢 人生如[レ]夢 人生夢如], %w[其疾如風 其疾如[レ]風 其疾風如],
+    %w[学如不及 学如[レ]不[レ]及 学及不如],
+    %w[非徒無益 非[二]徒無[レ]益[一] 徒益無非],
+    %w[非唯無益 非[二]唯無[レ]益[一] 唯益無非],
+    %w[不独無益 不[二]独無[レ]益[一] 独益無不],
+    %w[非独学 非[二]独学[一] 独学非],
+    %w[非徒無益而又害之 非[二]徒無[レ]益[一]而又害[レ]之 徒益無非又之害]
+  ]
+
+  it "仮定の 如・若 は文頭で従来どおり（比況と区別される）" do
+    expect(Kanbun::Kunten.to_bracket(units_for("如不成"))).to eq "如不[レ]成"
+    expect(Kanbun::Kunten.to_bracket(units_for("若不成"))).to eq "若不[レ]成"
+    expect(Kanbun::Kunten.to_bracket(units_for("独学乎"))).to eq "独学乎"
+  end
+
+  it "累加の 非独・不独 は限定の 独 と衝突しない" do
+    expect(Kanbun::Kunten.to_bracket(units_for("独臣有船"))).to eq "独臣有[レ]船"
+    expect { units_for("非徒") }.to raise_error(Racc::ParseError)
+  end
+
   # 唐詩の句（王維・李白・杜甫・白居易。いずれも著作権切れ）。辞書・文法の拡充（Phase 4h）の確認。
   # 返り点は市販の学習書の表記と一致することを確かめてあるが、書き下しや解説は転載しない。
   kunten_cases "漢詩の句（Phase 4h）", [

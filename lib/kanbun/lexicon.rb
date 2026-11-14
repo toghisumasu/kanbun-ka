@@ -27,7 +27,9 @@ module Kanbun
     FUNCTION_WORDS = {
       '不亦' => :FUKI_MATA,
       # 二重否定②（Phase 5a M1）。3 字 1 トークンにして、不得|不知 と読まれる誤りを塞ぐ
-      '被' => :PASS_HI, '不得不' => :DNEG_TOKU, '不可不' => :DNEG_KA,
+      '被' => :PASS_HI, '其' => :POSS,
+      # 累加（Phase 5a M5）。2 字 1 トークンにして、限定の 独 と区別する
+      '非徒' => :RUIKA, '非唯' => :RUIKA, '非独' => :RUIKA, '不独' => :RUIKA, '不得不' => :DNEG_TOKU, '不可不' => :DNEG_KA,
       '何為' => :GI_NANSURU, '何以' => :GI_NANMOTE,
       '何如' => :GI_IKANI_A, '如何' => :GI_IKANI_B,
       '莫如' => :MOKU_NAKU,  '莫若' => :MOKU_SHIKA,
@@ -68,7 +70,7 @@ module Kanbun
                植 買 戚 易 施 成 還 去 帰 習 敏 説 在 好
                教 問 揚 待 省 及 登
                照 随 潤 重 怕 欹 聴 撥 看 起 喜 飛 満 話 語
-               炊 釣 命 殺 敬 対].freeze
+               炊 釣 命 殺 敬 対 害].freeze
     NOUNS = %w[人 君 臣 子 民 文 道 国 師 天 地 王 士 物 事 土 寒 言 計 馬 船
                我 吾 汝 山 水 花 鳥 虎 礼 名 籍 豚 景 霜 備 患 過 春
                私 彼 酒 月 夜 風 恥 茶
