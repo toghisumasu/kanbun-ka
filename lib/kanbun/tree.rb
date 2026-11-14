@@ -22,12 +22,16 @@ module Kanbun
     # saidoku は再読文字（未・将・当…）の読みの表（Lexicon::SAIDOKU の値）。
     #   1 度目はその位置で、2 度目は Ret の head として返ってから読む。
     class Leaf
-      attr_reader :surface, :silent, :saidoku
+      # role は同じ字の用法を区別する印（書き下しの読みを選ぶためだけに使う。返り点には影響しない）。
+      #   :hikyo（A如B）:compare/:compare_neg（莫如・不若）:ukemi/:ukemi_sho（為A所B）:ukemi_mi（見V）
+      #   :dneg（不得不・不可不）:ruika_neg/:ruika_adv/:ruika_ji（非徒A而又B）
+      attr_reader :surface, :silent, :saidoku, :role
 
-      def initialize(surface, silent: false, saidoku: nil)
+      def initialize(surface, silent: false, saidoku: nil, role: nil)
         @surface = surface
         @silent = silent
         @saidoku = saidoku
+        @role = role
       end
 
       def silent? = @silent

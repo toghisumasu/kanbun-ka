@@ -18,12 +18,21 @@ RSpec.describe KanbunParserService do
       expect(described_class.call("我読漢文")[:kunten_aozora]).to eq "我読［＃二］漢文［＃一］"
     end
 
-    it "書き下しは返り点の順に並べる（送り仮名は未付与）" do
-      expect(described_class.call("我読漢文")[:kakikudashi]).to eq "我漢文読"
+    it "書き下しは読み辞書と活用で作る（歴史的仮名遣い）" do
+      result = described_class.call("我読漢文")
+      expect(result[:kakikudashi]).to eq "我は漢文を読む"
+      expect(result[:kakikudashi_exact]).to be true
     end
 
     it "再読文字は 2 度読む" do
-      expect(described_class.call("未知")[:kakikudashi]).to eq "未だ知ず"
+      expect(described_class.call("未知")[:kakikudashi]).to eq "未だ知らず"
+    end
+
+    it "読みの辞書にない語を含むときは、暫定の書き下し（漢字を読み順に並べたもの）に戻し、exact を false にする" do
+      result = described_class.call("寧為無為")
+      expect(result[:status]).to eq :parsed
+      expect(result[:kakikudashi_exact]).to be false
+      expect(result[:kakikudashi]).to eq "寧為為無"
     end
 
     it "前後の空白は無視する" do

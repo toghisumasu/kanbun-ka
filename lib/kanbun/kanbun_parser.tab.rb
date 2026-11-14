@@ -43,8 +43,8 @@ def parse(str)
 end
 
 # ---- 構文木の部品（規則のアクションから呼ぶ）----
-def lf(surface, silent = false)
-  Kanbun::Tree::Leaf.new(surface, silent: silent)
+def lf(surface, silent = false, role = nil)
+  Kanbun::Tree::Leaf.new(surface, silent: silent, role: role)
 end
 
 # 再読文字の葉。読みは Lexicon::SAIDOKU から引く。
@@ -55,7 +55,7 @@ end
 # 累加：非徒・非唯・非独・不独 を 2 字に割って、非（不）を A のあとで返って読む。
 def ruika(word, body)
   neg, adv = word.each_char.to_a
-  ret(lf(neg), lf(adv), body)
+  ret(lf(neg, false, :ruika_neg), lf(adv, false, :ruika_adv), body)
 end
 
 def seq(*nodes)
@@ -1069,7 +1069,7 @@ module_eval(<<'.,.,', 'kanbun_parser.y', 86)
 
 module_eval(<<'.,.,', 'kanbun_parser.y', 94)
   def _reduce_48(val, _values, result)
-     result = ret(lf('為'), lf(val[1]), ret(lf('所'), val[3]))
+     result = ret(lf('為', false, :ukemi), lf(val[1]), ret(lf('所', false, :ukemi_sho), val[3]))
     result
   end
 .,.,
@@ -1202,14 +1202,14 @@ module_eval(<<'.,.,', 'kanbun_parser.y', 143)
 
 module_eval(<<'.,.,', 'kanbun_parser.y', 144)
   def _reduce_67(val, _values, result)
-     result = ret(lf('不'), ret(lf('得'), ret(lf('不'), val[1])))
+     result = ret(lf('不', false, :dneg), ret(lf('得', false, :dneg), ret(lf('不', false, :dneg), val[1])))
     result
   end
 .,.,
 
 module_eval(<<'.,.,', 'kanbun_parser.y', 145)
   def _reduce_68(val, _values, result)
-     result = ret(lf('不'), ret(lf('可'), ret(lf('不'), val[1])))
+     result = ret(lf('不', false, :dneg), ret(lf('可', false, :dneg), ret(lf('不', false, :dneg), val[1])))
     result
   end
 .,.,
@@ -1475,7 +1475,7 @@ module_eval(<<'.,.,', 'kanbun_parser.y', 210)
 
 module_eval(<<'.,.,', 'kanbun_parser.y', 211)
   def _reduce_106(val, _values, result)
-     result = ret(lf(val[0]), lf(val[1]))
+     result = ret(lf(val[0], false, (val[0] == '見' ? :ukemi_mi : nil)), lf(val[1]))
     result
   end
 .,.,
@@ -1545,42 +1545,42 @@ module_eval(<<'.,.,', 'kanbun_parser.y', 226)
 
 module_eval(<<'.,.,', 'kanbun_parser.y', 231)
   def _reduce_116(val, _values, result)
-     result = seq(val[0], ret(lf('莫'), ret(lf('如'), val[2])))
+     result = seq(val[0], ret(lf('莫', false, :compare_neg), ret(lf('如', false, :compare), val[2])))
     result
   end
 .,.,
 
 module_eval(<<'.,.,', 'kanbun_parser.y', 232)
   def _reduce_117(val, _values, result)
-     result = seq(val[0], ret(lf('莫'), ret(lf('若'), val[2])))
+     result = seq(val[0], ret(lf('莫', false, :compare_neg), ret(lf('若', false, :compare), val[2])))
     result
   end
 .,.,
 
 module_eval(<<'.,.,', 'kanbun_parser.y', 233)
   def _reduce_118(val, _values, result)
-     result = seq(val[0], ret(lf('不'), ret(lf('若'), val[2])))
+     result = seq(val[0], ret(lf('不', false, :compare_neg), ret(lf('若', false, :compare), val[2])))
     result
   end
 .,.,
 
 module_eval(<<'.,.,', 'kanbun_parser.y', 234)
   def _reduce_119(val, _values, result)
-     result = seq(val[0], ret(lf('不'), ret(lf('如'), val[2])))
+     result = seq(val[0], ret(lf('不', false, :compare_neg), ret(lf('如', false, :compare), val[2])))
     result
   end
 .,.,
 
 module_eval(<<'.,.,', 'kanbun_parser.y', 240)
   def _reduce_120(val, _values, result)
-     result = seq(val[0], ret(lf('如'), val[2]))
+     result = seq(val[0], ret(lf('如', false, :hikyo), val[2]))
     result
   end
 .,.,
 
 module_eval(<<'.,.,', 'kanbun_parser.y', 241)
   def _reduce_121(val, _values, result)
-     result = seq(val[0], ret(lf('若'), val[2]))
+     result = seq(val[0], ret(lf('若', false, :hikyo), val[2]))
     result
   end
 .,.,
@@ -1608,7 +1608,7 @@ module_eval(<<'.,.,', 'kanbun_parser.y', 250)
 
 module_eval(<<'.,.,', 'kanbun_parser.y', 251)
   def _reduce_125(val, _values, result)
-     result = seq(ruika(val[0], val[1]), lf('而', true), val[3])
+     result = seq(ruika(val[0], val[1]), lf('而', true, :ruika_ji), val[3])
     result
   end
 .,.,

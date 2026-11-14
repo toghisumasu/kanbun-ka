@@ -92,7 +92,7 @@ rule
   # 被V：Vさる。被[レ]殺。V於A は動詞の補語（於）の形で、そのまま通る（受身かどうかは文脈）。
   # 為A V（所なし）は受身としては通さない。
   passive_clause
-    : UKE_I NOUN SHO verb_phrase { result = ret(lf('為'), lf(val[1]), ret(lf('所'), val[3])) }
+    : UKE_I NOUN SHO verb_phrase { result = ret(lf('為', false, :ukemi), lf(val[1]), ret(lf('所', false, :ukemi_sho), val[3])) }
     | PASS_HI verb_phrase        { result = ret(lf(val[0]), val[1]) }
 
   # ---- 条件「AなればB」の則（Phase 4m）。若〜則〜 は katen_clause が先に受ける ----
@@ -142,8 +142,8 @@ rule
     | NEG_HI NEG_BU verb_phrase { result = ret(lf('非'), ret(lf('不'), val[2])) }
     | NEG_MU NEG_BU verb_phrase SHA { result = ret(lf('無'), ret(lf('不'), val[2]), lf('者')) }   # 無不飲者（Phase 4o）
     | NEG_MU SHO    verb_phrase     { result = ret(lf('無'), ret(lf('所'), val[2])) }              # 無所知（Phase 4o）
-    | DNEG_TOKU verb_phrase { result = ret(lf('不'), ret(lf('得'), ret(lf('不'), val[1]))) }   # 不得不知（Phase 5a M1）
-    | DNEG_KA   verb_phrase { result = ret(lf('不'), ret(lf('可'), ret(lf('不'), val[1]))) }   # 不可不行（Phase 5a M1）
+    | DNEG_TOKU verb_phrase { result = ret(lf('不', false, :dneg), ret(lf('得', false, :dneg), ret(lf('不', false, :dneg), val[1]))) }   # 不得不知（Phase 5a M1）
+    | DNEG_KA   verb_phrase { result = ret(lf('不', false, :dneg), ret(lf('可', false, :dneg), ret(lf('不', false, :dneg), val[1]))) }   # 不可不行（Phase 5a M1）
 
   # ---- 部分否定句法 ----
   # 不必〜：必ずしも〜ではない  不常〜：いつも〜とは限らない  不復〜：二度と〜しない
@@ -209,7 +209,7 @@ rule
   # 他動・多義の述語：目的語（②④⑤）・補語（③）・置字つき補語。述語は目的語・補語のあとに読む。
   pred_tr
     : VERB                     { result = lf(val[0]) }
-    | VERB VERB                { result = ret(lf(val[0]), lf(val[1])) }                   # 前の動詞が返って読む（暫定）
+    | VERB VERB                { result = ret(lf(val[0], false, (val[0] == '見' ? :ukemi_mi : nil)), lf(val[1])) }                   # 前の動詞が返って読む（暫定）
     | VERB PREP NOUN           { result = ret(lf(val[0]), lf(val[1], true), lf(val[2])) } # ③ 置字つき補語
     | pred_obj                 { result = val[0] }
 
@@ -229,17 +229,17 @@ rule
   # 比較句法（莫如・莫若・不若・不如）
   # 百年之計莫如植樹 → 百年の計は樹を植えるに如くは莫し（計 樹 植 如 莫 の順に読む）
   compare_clause
-    : verb_phrase MOKU_NAKU  verb_phrase { result = seq(val[0], ret(lf('莫'), ret(lf('如'), val[2]))) }
-    | verb_phrase MOKU_SHIKA verb_phrase { result = seq(val[0], ret(lf('莫'), ret(lf('若'), val[2]))) }
-    | verb_phrase FUSHIKA    verb_phrase { result = seq(val[0], ret(lf('不'), ret(lf('若'), val[2]))) }
-    | verb_phrase FUNYUU     verb_phrase { result = seq(val[0], ret(lf('不'), ret(lf('如'), val[2]))) }
+    : verb_phrase MOKU_NAKU  verb_phrase { result = seq(val[0], ret(lf('莫', false, :compare_neg), ret(lf('如', false, :compare), val[2]))) }
+    | verb_phrase MOKU_SHIKA verb_phrase { result = seq(val[0], ret(lf('莫', false, :compare_neg), ret(lf('若', false, :compare), val[2]))) }
+    | verb_phrase FUSHIKA    verb_phrase { result = seq(val[0], ret(lf('不', false, :compare_neg), ret(lf('若', false, :compare), val[2]))) }
+    | verb_phrase FUNYUU     verb_phrase { result = seq(val[0], ret(lf('不', false, :compare_neg), ret(lf('如', false, :compare), val[2]))) }
 
   # 比況（A如B・A若B：AはBのごとし）。如 は B を読んでから返る（人如[レ]山）。
   # 文頭の 如・若 は仮定（katen_clause）。先頭に何もない位置か、あとかで LR が区別する。
   # 「学如不及」のように B が否定句のときも受ける。
   hikyo_clause
-    : verb_phrase KATEN_NYO   hikyo_part { result = seq(val[0], ret(lf('如'), val[2])) }
-    | verb_phrase KATEN_SHIKA hikyo_part { result = seq(val[0], ret(lf('若'), val[2])) }
+    : verb_phrase KATEN_NYO   hikyo_part { result = seq(val[0], ret(lf('如', false, :hikyo), val[2])) }
+    | verb_phrase KATEN_SHIKA hikyo_part { result = seq(val[0], ret(lf('若', false, :hikyo), val[2])) }
 
   hikyo_part
     : verb_phrase { result = val[0] }
@@ -249,7 +249,7 @@ rule
   #   非[二]徒無[レ]益[一]。下半分（而又B）は省ける。
   ruika_clause
     : RUIKA ruika_part                  { result = ruika(val[0], val[1]) }
-    | RUIKA ruika_part ER verb_phrase   { result = seq(ruika(val[0], val[1]), lf('而', true), val[3]) }
+    | RUIKA ruika_part ER verb_phrase   { result = seq(ruika(val[0], val[1]), lf('而', true, :ruika_ji), val[3]) }
 
   ruika_part
     : verb_phrase { result = val[0] }
@@ -359,8 +359,8 @@ def parse(str)
 end
 
 # ---- 構文木の部品（規則のアクションから呼ぶ）----
-def lf(surface, silent = false)
-  Kanbun::Tree::Leaf.new(surface, silent: silent)
+def lf(surface, silent = false, role = nil)
+  Kanbun::Tree::Leaf.new(surface, silent: silent, role: role)
 end
 
 # 再読文字の葉。読みは Lexicon::SAIDOKU から引く。
@@ -371,7 +371,7 @@ end
 # 累加：非徒・非唯・非独・不独 を 2 字に割って、非（不）を A のあとで返って読む。
 def ruika(word, body)
   neg, adv = word.each_char.to_a
-  ret(lf(neg), lf(adv), body)
+  ret(lf(neg, false, :ruika_neg), lf(adv, false, :ruika_adv), body)
 end
 
 def seq(*nodes)
