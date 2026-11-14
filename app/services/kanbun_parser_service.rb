@@ -25,7 +25,8 @@ class KanbunParserService
   # 返り値
   #   kunten:        訓点付き漢文（返り点を [ ] で付記。例: 我読[二]漢文[一]）
   #   kakikudashi:   書き下し文（歴史的仮名遣い）。kakikudashi_exact が false のときは暫定（漢字を読み順に並べただけ）
-  #   kakikudashi_exact: Yomi で書き下せたか
+  #   kakikudashi_exact: 確かな読みか（Yomi で書き下せて、復文検査に通り、曖昧な句形でない）
+  #   kakikudashi_notes: exact でない理由（辞書にない語・復文検査の不一致・曖昧な句形）
   #   kunten_aozora: 注記つき漢文（正本。Kanbun::Aozora.parse で読み戻せる）
   #   status:        :parsed または :unparsed
   #   error:         nil または解析できなかった理由（文字列）
@@ -42,11 +43,12 @@ class KanbunParserService
     units = Kanbun::Kunten.annotate(tree)
     aozora = Kanbun::Kunten.to_aozora(units)
 
-    kaki, exact = kakikudashi(tree, aozora)
+    kaki, exact, notes = kakikudashi(tree, aozora, Kanbun::Kunten.reading(units))
     {
       kunten:        Kanbun::Kunten.to_bracket(units),
       kakikudashi:   kaki,
       kakikudashi_exact: exact,
+      kakikudashi_notes: notes,
       kunten_aozora: aozora,
       status:        :parsed,
       error:         nil
@@ -57,11 +59,14 @@ class KanbunParserService
 
   private
 
-  # [書き下し, Yomi で書き下せたか]
-  def kakikudashi(tree, aozora)
-    [Kanbun::Yomi.kakikudashi(tree), true]
-  rescue Kanbun::Yomi::MissingEntry
-    [Kanbun::Kakikudashi.convert(aozora, yomi: false, hiragana: true), false]
+  # [書き下し, 確かな読みか, 理由の一覧]
+  #   確かな読み＝読みの辞書で書き下せて、復文検査に通り、曖昧な句形でないこと。
+  #   曖昧な句形・復文検査の不一致は、書き下しは返すが exact にしない。辞書にない語は暫定の書き下しに戻す。
+  def kakikudashi(tree, aozora, reading)
+    result = Kanbun::Yomi.analyze(tree, reading: reading)
+    [result.text, result.exact?, result.problems + result.ambiguities]
+  rescue Kanbun::Yomi::MissingEntry => e
+    [Kanbun::Kakikudashi.convert(aozora, yomi: false, hiragana: true), false, [e.message]]
   end
 
   def unparsed(error)
@@ -69,6 +74,7 @@ class KanbunParserService
       kunten:        @hakubun,
       kakikudashi:   @hakubun,
       kakikudashi_exact: false,
+      kakikudashi_notes: [],
       kunten_aozora: nil,
       status:        :unparsed,
       error:         "#{error.class.name.split('::').last}: #{error.message}"

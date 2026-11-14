@@ -119,8 +119,20 @@ module Kanbun
 
     module_function
 
+    # text: 書き下し／problems: 復文検査の不一致／ambiguities: 読みが 1 つに決まらない句形
+    Result = Struct.new(:text, :problems, :ambiguities) do
+      # 書き下しを「確かな読み」と名乗ってよいか
+      def exact? = problems.empty? && ambiguities.empty?
+    end
+
     # 構文木 → 書き下し（String）。扱えない語・句法は MissingEntry。
     def kakikudashi(tree)
+      analyze(tree).text
+    end
+
+    # 書き下しに加えて、復文検査と曖昧な句形の検出を行う。
+    # reading: Kunten.reading の結果（返り点から求めた読む順の漢字列）。渡すと読み順を照合する。
+    def analyze(tree, reading: nil)
       items = collect(tree)
       out = Array.new(items.size, '')
       demand = { form: :shushi }
@@ -128,7 +140,80 @@ module Kanbun
         out[i], demand = render(items, i, demand)
       end
       add_topic!(items, out)
-      out.join
+      Result.new(out.join, fukubun_problems(items, out, reading), ambiguities(tree))
+    end
+
+    # ---- 復文の検査 ----
+    # 書き下しが白文と矛盾しないか。完全な復元ではなく、次の取りこぼしを検出する。
+    #   1. 読む順が、返り点から求めた順（Kunten.reading）と一致する
+    #   2. 置き字（読まない字）が書き下しに出ていない（累加の「、而も」だけは別の字として出る）
+    #   3. 読む字が書き下しから落ちていない。実字（名詞・動詞・形容詞・副詞）は漢字が残っている
+    #   4. 再読文字は 1 度目と 2 度目が対になっている
+    CONTENT_TOKENS = %i[NOUN VERB VERB_I ADJ ADV].freeze
+    PARTICLE_ONLY = %w[与 自 従].freeze
+
+    def fukubun_problems(items, out, reading)
+      problems = []
+      shown = items.reject { |i| i.leaf.silent? }
+      if reading && shown.map(&:surface).join != reading
+        problems << "読む順が返り点と一致しません（書き下し側 #{shown.map(&:surface).join}／返り点側 #{reading}）"
+      end
+      items.each_with_index do |it, i|
+        problems.concat(item_problems(it, out[i]))
+      end
+      saidoku = items.select { |i| i.leaf.saidoku? }
+      if saidoku.count { |i| !i.second } != saidoku.count(&:second)
+        problems << '再読文字の 1 度目と 2 度目が対になっていません'
+      end
+      problems
+    end
+
+    def item_problems(item, text)
+      if item.leaf.silent?
+        return [] if text.empty? || item.role == :ruika_ji
+
+        return ["置き字 #{item.surface} が書き下しに出ています"]
+      end
+      # 与A・自A・従A は、字そのものは出さず、助詞（と・より）が直前の名詞の送り仮名になる
+      return [] if text.empty? && PARTICLE_ONLY.include?(item.surface)
+      return ["#{item.surface} が書き下しから落ちています"] if text.empty?
+
+      content = item.role.nil? && !item.leaf.saidoku? && CONTENT_TOKENS.include?(Lexicon::TABLE[item.surface])
+      return ["実字 #{item.surface} の漢字が書き下しに残っていません"] if content && !text.start_with?(item.surface)
+
+      []
+    end
+
+    # ---- 曖昧な句形 ----
+    # 文法だけでは読みが決まらず、辞書の既定の読みを選んでいるもの。exact とは名乗らせない。
+    #   - 他動詞＋於A（目的語なし）：殺於敵 は 敵に殺さる（受身）か 敵に殺す か
+    #   - 為A V（所なし）：連動の読みで通るが、受身かもしれない
+    #   - 見V：殺さる（受身）か Vを見る か
+    def ambiguities(tree)
+      found = []
+      scan_ambiguities(tree, found)
+      found.uniq
+    end
+
+    def scan_ambiguities(node, found)
+      case node
+      when Tree::Seq
+        node.children.each_with_index do |c, i|
+          if c.is_a?(Tree::Ret) && c.head.surface == '為' && c.head.role.nil? && node.children[i + 1]
+            found << "為A V（所なし）は受身かもしれません: #{c}#{node.children[i + 1]}"
+          end
+          scan_ambiguities(c, found)
+        end
+      when Tree::Ret
+        h = node.head
+        found << "見V は受身（Vさる）か Vを見る か決まりません: #{node}" if h.role == :ukemi_mi
+        first = node.block.first
+        if first.is_a?(Tree::Leaf) && first.silent? && VERBS.key?(h.surface) && h.role.nil? &&
+           VERBS[h.surface][:obj] == 'を'
+          found << "他動詞＋於A は受身か能動か決まりません: #{node}"
+        end
+        node.block.each { |c| scan_ambiguities(c, found) }
+      end
     end
 
     # ---- 読む順の語列を作る（再読文字は 2 度、1 度目と 2 度目）----
