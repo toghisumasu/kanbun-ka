@@ -8,6 +8,7 @@ token NEG_BU NEG_FU NEG_HI NEG_MU NEG_BAKU
       MOKU_NAKU MOKU_SHIKA
       FUSHIKA FUNYUU
       DNEG_TOKU DNEG_KA
+      UKE_I PASS_HI
       YO_NIMO  NAMU IWA_N_YA
       KATEN_SHIKA KATEN_NYO KATEN_IYA
       KATEN_IEDOMO KATEN_TATOI
@@ -50,6 +51,7 @@ rule
     | hangi_clause       { result = val[0] }
     | shitsumon_clause   { result = val[0] }
     | gi_adv_clause      { result = val[0] }
+    | passive_clause     { result = val[0] }   # 受身（Phase 5a M4）
     | neg_clause         { result = val[0] }   # 否定（フェーズ1）
     | prohibit_clause    { result = val[0] }   # 禁止（フェーズ1）
     | saidoku_clause     { result = val[0] }   # 再読文字（Phase 4d）
@@ -77,9 +79,19 @@ rule
     | NOUN saidoku_clause     { result = seq(lf(val[0]), val[1]) }
     | NOUN neg_clause SHI_KO  { result = seq(lf(val[0]), val[1], lf('乎')) }   # 此不楽乎（Phase 4o）
     | NOUN shieki_clause      { result = seq(lf(val[0]), val[1]) }   # 王使臣行（Phase 4m）
+    | NOUN passive_clause     { result = seq(lf(val[0]), val[1]) }   # 彼為敵所殺・王被殺於臣下（Phase 5a M4）
     | NOUN kara_clause        { result = seq(lf(val[0]), val[1]) }   # 彼自鹿児島来（Phase 4w）
     | NOUN pred_obj neg_clause           { result = seq(lf(val[0]), val[1], val[2]) }  # 小閣重衾不怕寒（Phase 4h）
     | pred_obj ADV neg_clause            { result = seq(val[0], lf(val[1]), val[2]) }  # 潤物細無声
+
+  # ---- 受身（Phase 5a M4）----
+  # 為A所B：Aの Bする所と為る。敵を読み、殺を読み、所を読んでから為に返る。
+  #   為[二]敵所[レ]殺[一]。為 は辞書の動詞 為 とトークナイザーの先読みで区別する（UKE_I）。
+  # 被V：Vさる。被[レ]殺。V於A は動詞の補語（於）の形で、そのまま通る（受身かどうかは文脈）。
+  # 為A V（所なし）は受身としては通さない。
+  passive_clause
+    : UKE_I NOUN SHO verb_phrase { result = ret(lf('為'), lf(val[1]), ret(lf('所'), val[3])) }
+    | PASS_HI verb_phrase        { result = ret(lf(val[0]), val[1]) }
 
   # ---- 条件「AなればB」の則（Phase 4m）。若〜則〜 は katen_clause が先に受ける ----
   sokuclause

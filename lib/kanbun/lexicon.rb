@@ -27,7 +27,7 @@ module Kanbun
     FUNCTION_WORDS = {
       '不亦' => :FUKI_MATA,
       # 二重否定②（Phase 5a M1）。3 字 1 トークンにして、不得|不知 と読まれる誤りを塞ぐ
-      '不得不' => :DNEG_TOKU, '不可不' => :DNEG_KA,
+      '被' => :PASS_HI, '不得不' => :DNEG_TOKU, '不可不' => :DNEG_KA,
       '何為' => :GI_NANSURU, '何以' => :GI_NANMOTE,
       '何如' => :GI_IKANI_A, '如何' => :GI_IKANI_B,
       '莫如' => :MOKU_NAKU,  '莫若' => :MOKU_SHIKA,
@@ -100,7 +100,7 @@ module Kanbun
       孔子 君子 聖人 後世 返景 苛政 霜葉 項梁 陽貨 歳月 吾身 鶏口 牛後 故郷 行楽 林檎 春夜
       空山 人語 響 青苔 洛城 玉笛 此夜 曲中 折柳 何人 故園 好雨 時節
       錦官城 小閣 遺愛寺 香炉峰 野径 江船 長安 帰処
-      先生 学生 時間 老人 今日 昔人 閃光 鹿児島 人生
+      先生 学生 時間 老人 今日 昔人 閃光 鹿児島 人生 臣下
     ].freeze
     COMPOUND_VERBS = %w[見聞 逃走 呼吸 望見].freeze
 
@@ -127,10 +127,20 @@ module Kanbun
     # トークナイザーで 1 語先読みして別トークンにする。
     def self.token_for(word, scanner)
       token = TABLE.fetch(word)
+      return ukemi_token(word, token, scanner) if word == '為'
       return token unless word == '乎'
 
       nxt = scanner.check(PATTERN)
       nxt && TABLE[nxt] == :NOUN ? :PREP : token
+    end
+
+    # 為 + 名詞 + 所 は受身（為A所B）。それ以外の 為（為す・なる）は VERB のまま。
+    # 乎 と同じ理由で 2 語先読みをトークナイザーで行う（Phase 5a M4）。
+    def self.ukemi_token(_word, token, scanner)
+      peek = StringScanner.new(scanner.rest)
+      noun = peek.scan(PATTERN)
+      sho = peek.scan(PATTERN)
+      TABLE[noun] == :NOUN && TABLE[sho] == :SHO ? :UKE_I : token
     end
 
     # 句読点。トークンにはせず、記録もせずに読み飛ばす。

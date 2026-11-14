@@ -179,6 +179,27 @@ RSpec.describe Kanbun::Kunten do
     %w[学而不行 学而不[レ]行 学行不], %w[不学而行 不[レ]学而行 学不行]
   ]
 
+  # Phase 5a M4: 受身。為A所B・被V・見V・V於A。為A V（所なし）は受身としては通さない。
+  kunten_cases "受身（Phase 5a M4）", [
+    %w[彼為敵所殺 彼為[二]敵所[レ]殺[一] 彼敵殺所為],
+    %w[為敵所殺 為[二]敵所[レ]殺[一] 敵殺所為],
+    %w[我為人所知 我為[二]人所[レ]知[一] 我人知所為],
+    %w[被殺 被[レ]殺 殺被], %w[彼被殺 彼被[レ]殺 彼殺被],
+    %w[王被殺於臣下矣 王被[レ]殺[二]於臣下[一]矣 王臣下殺被],
+    %w[見殺 見[レ]殺 殺見],
+    %w[殺於敵 殺[二]於敵[一] 敵殺]
+  ]
+
+  it "為A所B の 為 は先読みで受身にし、通常の動詞 為 は変えない（寧為無為・何為行）" do
+    expect(Kanbun::Kunten.to_bracket(units_for("寧為無為"))).to eq "寧為無[レ]為"
+    expect(Kanbun::Kunten.to_bracket(units_for("何為行"))).to eq "何為行"
+  end
+
+  it "所のない 為A、受け手のない 為A所 は受身として通さない" do
+    expect { units_for("為敵所") }.to raise_error(Racc::ParseError)
+    expect { units_for("被") }.to raise_error(Racc::ParseError)
+  end
+
   # 唐詩の句（王維・李白・杜甫・白居易。いずれも著作権切れ）。辞書・文法の拡充（Phase 4h）の確認。
   # 返り点は市販の学習書の表記と一致することを確かめてあるが、書き下しや解説は転載しない。
   kunten_cases "漢詩の句（Phase 4h）", [
