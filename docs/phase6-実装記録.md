@@ -169,3 +169,64 @@ dneg（得・可）、ukemi_i（為）、hikyo（如）、compare_verb／compare
 2. 構造の誤り・与の脱落は、辞書項目が未確認である間だけ偶然 exact:false になっている。項目を 1 つずつ確認済みにすると、これらが exact:true に戻る。確認の順を決めるときに、この種の文を先に別の手当てが要る（次の段の対象）。
 3. 動詞の大半が `obj` を明示していないため、目的語を取る文は DEFAULT:particle で必ず exact:false になる（363 文中 105 文）。これらを exact にするには、辞書に obj の明示データを足す必要がある（設計どおりだが、確認作業の量に効く）。
 4. 未確認項目の使用頻度の上位は VERBS:学（41）・知（22）・読（20）・DEFAULT:particle:読（17）・殺（14）・行（14）・飲（13）。
+
+---
+
+# 第2段（S7 以降）：辞書の表の外の「読みの出どころ」を識別可能にする
+
+ブランチは `phase6a-verified` のまま。第1段の終点は 9c5da11。
+
+## S7 P0：読むだけ（事実のみ。lib/kanbun/yomi.rb は 9c5da11 の状態）
+
+### (a) 辞書の表を引かずに読みを出している箇所（yomi.rb の行）
+
+| 種別 | 位置 | 読みの出どころ |
+|---|---|---|
+| 直書きの機能語（`render` の `case`） | 296 | 不・弗 → ず／ざる／ざれ…（`aux_neg` 348 で 次が 可・得 のとき ざる、不知非恥型は ざるは） |
+| 〃 | 297 | 可 → べし／べき／べから／べく |
+| 〃 | 298-299 | 而（接続）→ 「て」を前の語に付ける／矣・焉 → 読まない |
+| 〃 | 300-303 | 也 → なり／なる、乎（非置字）→ や、哉 → かな、邪 → か。乎の置字は読まない（301） |
+| 〃 | 304 | 於・于 → 読まない |
+| 〃 | 305-307 | 所・者（そのまま出す）、則 → 「則ち」＋ば |
+| 〃 | 308-312 | 若（仮定）→ 「若し」。則なしは MissingEntry |
+| 〃 | 313-317 | 非（render_hi 361）、無・莫（render_nashi 367）、勿 → 勿かれ＋こと、使・令 → しむ、被 → る／らる |
+| 〃 | 318-320 | 自・従 → 空＋「より」を次の名詞に、与 → 空＋「と」、其 → 其の |
+| role で分かれる読み（`render` 280-289） | 280-289 と 426・432・468・475・482・491・496 | ruika_adv（徒だに・唯だに・独り）、ruika_neg（非ず／ならず＋のみ）、ruika_ji（、而も）、hikyo（ごとし／ごとき）、compare（如く／若く）、compare_neg（莫し／不）、ukemi（為る：`ukemi_i`）、ukemi_mi（る）、dneg（得・べし：`dneg`） |
+| 述語ごとの助詞の直書き（`head_cases`） | 258-265、269、271 | 受身 の／比況 の／比較 に／非 に／使・令 をして／無・有・莫 に／二名詞の 1 つ目 の／形容詞 より |
+| 主題の「は」 | 508-516 `add_topic!` | 先頭が代名詞、または比況・比較・受身・非を含む文の先頭名詞に「は」を足す |
+| 名詞述語 | （読みを出す箇所がない） | `verb_phrase: NOUN NOUN`（孔子聖人）は、2 つの名詞を並べるだけ。「なり」を足す処理はどこにもない |
+| 置き字 | 299・304・301・298 | 矣・焉・於・于・乎（置字）・而 は上の `case` 内で空文字を返す |
+| 再読文字 | 453-460 `saidoku` | 1 度目：Lexicon::SAIDOKU（表）。2 度目：SAIDOKU_SECOND（表）。**表を引く**（第1段で記録済み） |
+| 名詞 | 385-396 | 表層形＋助詞（`it_part`）。表なし。対象外（第1段） |
+
+### (b) 文法規則（script/kanbun_parser.y）
+
+- 規則は **160 件**（`lib/kanbun/kanbun_parser.tab.rb` の `racc_reduce_table` の `_reduce_1`〜`_reduce_160` と一致）。
+- 各規則が作る Tree の節点：新しい節点を作らず `val[0]` を通すだけのものが 40 件（sentence・clause・cond_part・ren_part・hikyo_part・ruika_part ほか）、残る 120 件が Seq／Ret／Leaf／配列（final_particles）を作る。左辺ごとの内訳：
+
+| 左辺 | 件数 | 作るもの |
+|---|---|---|
+| clause | 26 | 通過のみ |
+| subj_neg_clause | 11 | Seq |
+| verb_phrase | 21 | Seq×15、Leaf×1、Seq/Ret（連動の ambiguous 付与）×2、通過×3 |
+| katen_clause | 8 | Seq |
+| gi_adv_clause | 9 | Seq |
+| double_neg_clause | 7 | Ret |
+| neg_clause | 5 | Ret |
+| compare_clause・shitsumon_clause・hangi_clause・sv・partial_neg_clause・pred_obj・pred_in・pred_tr・gyaku_katen_clause・final_one・final_particles ほか | 各 1〜4 | Seq／Ret／Leaf／配列 |
+- **規則の同一性は Tree からは分からない**。Leaf／Seq／Ret の形（子の種別と role と silent）だけで見ると、363 文で現れた 79 種の形のうち **28 種の形を複数の規則が共有**している（`.y` を変えずに、各 `_reduce_N` を包んで調べた）。例：
+  - `Seq(Leaf, Leaf)` を作る規則：`verb_phrase/NOUN NOUN`（無非王土・孔子聖人）、`sv/NOUN pred_in`（犬走）、`shitsumon_clause/verb_phrase SHI_KO`（学乎）、`gentei_clause/GENTEI_YUI verb_phrase`（惟士）、`gi_adv_clause/GI_AN VERB`（安在）ほか。
+  - `Ret(Leaf; Leaf)`：`pred_tr/VERB VERB`、`pred_obj/VERB NOUN`、`neg_clause/NEG_MU verb_phrase`、`neg_clause/NEG_BU verb_phrase`、`saidoku_clause/SAIDOKU verb_phrase`、`passive_clause/PASS_HI verb_phrase` ほか。
+  - Leaf の surface（字）を見ても、`孔子聖人`（名詞述語）と `犬走`（主述）は区別できるが、字の違いは規則の違いではない（同じ規則で別の字が入る）。
+
+### (c) 規則ID の付け方
+
+- **案1（Tree の形から導く）では足りない。** 上のとおり、28 種の形が複数規則で共有され、特に無非王土・孔子聖人が通る `verb_phrase/NOUN NOUN` は `Seq(Leaf, Leaf)` で、主述・疑問・限定の規則と区別がつかない。
+- **案2（.y の各規則に名前を付ける）は不要。** `.y` を変えずに識別できる方法がある（これを **案3** とする）：
+  1. `script/kanbun_parser.y` の規則を出現順に読み、規則 N の名前を「左辺/右辺の記号」（例 `verb_phrase/NOUN NOUN`）にした表 `lib/kanbun/rule_ids.rb` を `script/gen_rule_ids.rb` で生成する（160 件。生成物は `.y` との一致を spec で見る）。
+  2. Racc が生成した各 `_reduce_N` を、`.y` を変えずに（別ファイルで `prepend` して）包み、新しく作られた Tree 節点に規則名を付ける。通過だけの規則は、すでに規則名のある節点を返すので上書きしない。
+  3. `Yomi.analyze` が、木の中の規則名を `RULE:<規則名>` として `used_entries` に入れる。
+- 試作で、363 文を通し、規則名が付かなかった内部の節点は 71 個（いずれも別の規則の結果の内側に作られた節点で、上位の節点に規則名が付く）。`.y` は未変更。**したがって、`.y` を変える必要は出なかった。**
+- 規則名は右辺の記号列そのものなので、文法の規則を書き換えると名前が変わり、確認済み印は外れる（意図した動作）。左辺名や規則の並びの変更だけでは変わらない。
+
+注意（案3 の前提）：Racc の `_reduce_N` が、C 拡張の構文解析でも `rb_funcall` 経由で呼ばれること（試作で確認済み。どちらの実行方式でも包みが効く）。
