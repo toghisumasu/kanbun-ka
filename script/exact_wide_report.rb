@@ -4,6 +4,7 @@
 #   bin/rails runner script/exact_wide_report.rb
 
 KanbunParserService
+require Rails.root.join("lib/kanbun/usage_ranking").to_s
 sents = []
 File.readlines("script/bench_expected.tsv", chomp: true).reject { |l| l.strip.empty? || l.start_with?("#") }.each { |l| sents.concat(l.split("\t")[1..]) }
 Dir["spec/**/*_spec.rb"].each do |f|
@@ -35,5 +36,5 @@ end
 puts "文数 #{sents.size}: exact #{exact} / 復文検査の違反 #{viol} / その他(解析不可・辞書外・曖昧) #{other}"
 # Phase 6a S5: tree_ok（従来の exact）／verified（使った項目がすべて確認済み）／exact（両方）
 puts "文数 #{sents.size}: 解析 #{count[:parsed]} / tree_ok #{count[:tree_ok]} / verified #{count[:verified]} / exact #{count[:exact]}"
-puts "未確認項目の使用頻度（上位30。DEFAULT は既定値で補った読み）:"
-usage.sort_by { |id, n| [-n, id] }.first(30).each { |id, n| puts format("  %4d  %s", n, id) }
+puts "未確認項目の使用頻度（種類ごとの上位30。DEFAULT は既定値で補った読み）:"
+puts Kanbun::UsageRanking.lines(usage)

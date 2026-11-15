@@ -8,6 +8,7 @@
 #   diff tmp/exact_before.tsv tmp/exact_after.tsv
 
 KanbunParserService # lib/kanbun を読み込む
+require Rails.root.join("lib/kanbun/usage_ranking").to_s
 
 rows = File.readlines(Rails.root.join("script/bench_expected.tsv"), chomp: true)
            .reject { |l| l.strip.empty? || l.start_with?("#") }
@@ -26,5 +27,5 @@ rows.each do |line|
 end
 # 標準出力は TSV の比較用に変えない。集計は標準エラーに出す（Phase 6a S5）。
 warn "文数 #{rows.size}: 解析 #{count[:parsed]} / tree_ok #{count[:tree_ok]} / verified #{count[:verified]} / exact #{count[:exact]}"
-warn "未確認項目の使用頻度（上位30。DEFAULT は既定値で補った読み）:"
-usage.sort_by { |id, n| [-n, id] }.first(30).each { |id, n| warn format("  %4d  %s", n, id) }
+warn "未確認項目の使用頻度（種類ごとの上位30。DEFAULT は既定値で補った読み）:"
+Kanbun::UsageRanking.lines(usage).each { |l| warn l }
