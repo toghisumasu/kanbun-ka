@@ -1,0 +1,14 @@
+# 確認済みの辞書項目（Phase 6a）。表名ごとにキーの配列を書く。
+#
+#   VERBS:
+#     - 学
+#   ADVS:
+#     - 皆
+#
+# 使える表：VERBS ADJS ADVS ADV_WHOLE SAIDOKU SAIDOKU_SECOND
+#   SAIDOKU は再読文字の 1 度目の読み（Lexicon::SAIDOKU）、SAIDOKU_SECOND は 2 度目の読み。
+# 辞書にないキーは読み込み時に拒否する。DEFAULT（既定値で補った読み）は確認済みにできない。
+# 項目を確認済みにするには、読みを参考書等で確認し、必要なら辞書に明示的なデータを足してから、ここに書く。
+#
+# いまは空（確認済み 0 件）。
+{}
