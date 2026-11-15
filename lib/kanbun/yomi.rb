@@ -130,7 +130,7 @@ module Kanbun
       { ruika_adv: %w[徒 唯 独], ruika_neg: %w[非 不], ruika_ji: %w[而], hikyo: %w[如 若], compare: %w[如 若],
         compare_neg: %w[莫 不], ukemi: %w[為], ukemi_mi: %w[見], dneg: %w[不 得 可] }
         .flat_map { |role, chars| chars.map { |c| "#{c}@#{role}" } } +
-      %w[主題は 二名詞の]
+      %w[主題は]
     ).uniq.freeze
 
     # 代名詞の主語（は を付ける）
@@ -263,8 +263,8 @@ module Kanbun
         case kind
         when :comp then defaults.include?(:comp)
         when :obj then defaults.include?(:obj)
-        else # 二名詞：1 つ目の「の」は直書き（cases の定めがなければ）、2 つ目は obj（cases があれば明示）
-          note('FUNC:二名詞の') if obj_idx.zero? && verb[:cases].nil?
+        else # 二名詞：cases の定めがなければ、1 つ目に「の」を付ける既定（DEFAULT:cases）。2 つ目は obj（cases があれば明示）
+          note("DEFAULT:cases:#{head.surface}") if obj_idx.zero? && verb[:cases].nil?
           obj_idx == 1 ? defaults.include?(:obj) && verb[:cases].nil? : false
         end
       note("DEFAULT:particle:#{head.surface}") if used_default

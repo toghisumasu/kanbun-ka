@@ -56,6 +56,16 @@ RSpec.describe "Yomi::Result#used_entries" do
       expect(used("不学").grep(/DEFAULT/)).to be_empty
     end
 
+    it "二名詞の述語に格の定め（cases）がないとき：1 つ目に「の」を付ける既定（未知故郷事 の 知）" do
+      expect(used("未知故郷事")).to include("DEFAULT:cases:知")
+      expect(used("陽貨帰孔子豚")).to include("DEFAULT:cases:帰")
+    end
+
+    it "二名詞の格を cases で明示した動詞（教・揚）には DEFAULT:cases を記録しない" do
+      expect(used("項梁教籍兵法").grep(/DEFAULT:cases/)).to be_empty
+      expect(used("君子揚名後世").grep(/DEFAULT:cases/)).to be_empty
+    end
+
     it "活用形：直前の語が形を要求しないとき（demand に form がない）" do
       tree = KanbunParser.new.parse_tree("学", strict: true)
       items = Kanbun::Yomi.collect(tree)

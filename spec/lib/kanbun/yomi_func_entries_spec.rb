@@ -58,10 +58,9 @@ RSpec.describe "Yomi::Result#used_entries の FUNC" do
     end
   end
 
-  describe "述語の助詞・主題の「は」を直書きで付ける箇所" do
+  describe "主題の「は」を直書きで付ける箇所" do
     func_cases [
-      ["我読漢文", %w[FUNC:主題は]],
-      ["未知故郷事", %w[FUNC:二名詞の]]
+      ["我読漢文", %w[FUNC:主題は]]
     ]
   end
 

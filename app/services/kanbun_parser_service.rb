@@ -72,7 +72,8 @@ class KanbunParserService
 
   RULE_COMMENTS = Kanbun::RuleIds::TABLE.values.to_h { |name, comment| [name, comment] }.freeze
 
-  DEFAULT_KINDS = { 'particle' => '助詞を辞書が明示していない', 'form' => '活用形を決める語がない' }.freeze
+  DEFAULT_KINDS = { 'particle' => '助詞を辞書が明示していない', 'form' => '活用形を決める語がない',
+                    'cases' => '二名詞の格（cases）を辞書が明示していない' }.freeze
 
   private
 
@@ -107,7 +108,7 @@ class KanbunParserService
         "未確認の規則: #{name}#{"（#{comment}）" if comment}"
       elsif id.start_with?('DEFAULT:')
         _, kind, surface = id.split(':', 3)
-        "既定値: #{{ 'particle' => '助詞', 'form' => '活用形' }.fetch(kind, kind)}（#{surface}）：#{DEFAULT_KINDS.fetch(kind, kind)}"
+        "既定値: #{{ 'particle' => '助詞', 'form' => '活用形', 'cases' => '二名詞の格' }.fetch(kind, kind)}（#{surface}）：#{DEFAULT_KINDS.fetch(kind, kind)}"
       else
         "未確認の辞書項目: #{id}"
       end
