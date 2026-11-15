@@ -16,6 +16,9 @@ class KanbunTranslatorService
     :parse_error,  # nil = 訓点付与に成功 / 文字列 = Raccパーサーが解析できなかった理由
     :kakikudashi_exact,   # true = 書き下しは確かな読み（復文検査を通り、曖昧でない）。false なら kakikudashi は暫定出力
     :kakikudashi_reasons, # exact:false の理由の一覧（空配列 = 理由なし）
+    :kakikudashi_tree_ok,   # 従来の exact（読みが 1 つに決まり、復文検査の違反なし）
+    :kakikudashi_verified,  # 使った辞書項目がすべて確認済み（Phase 6a）
+    :kakikudashi_unverified, # 使った項目のうち未確認のもの（項目 ID）
     :retried,      # true = LLM の出力が白文でなかった（仮名混じりなど）ため 1 回だけ再生成した
     keyword_init: true
   )
@@ -129,6 +132,9 @@ class KanbunTranslatorService
       kakikudashi: kunten_result[:kakikudashi],
       kakikudashi_exact:   kunten_result[:kakikudashi_exact],
       kakikudashi_reasons: kunten_result[:kakikudashi_reasons],
+      kakikudashi_tree_ok: kunten_result[:kakikudashi_tree_ok],
+      kakikudashi_verified: kunten_result[:kakikudashi_verified],
+      kakikudashi_unverified: kunten_result[:kakikudashi_unverified],
       skeleton:    skeleton,
       fallback:    fallback,
       parse_error: kunten_result[:error],

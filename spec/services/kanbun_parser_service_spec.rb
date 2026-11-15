@@ -21,7 +21,7 @@ RSpec.describe KanbunParserService do
     it "書き下しは読み辞書と活用で作る（歴史的仮名遣い）" do
       result = described_class.call("我読漢文")
       expect(result[:kakikudashi]).to eq "我は漢文を読む"
-      expect(result[:kakikudashi_exact]).to be true
+      expect(result[:kakikudashi_tree_ok]).to be true # exact は確認済み印（Phase 6a）が別に要る。kanbun_parser_service_verified_spec
     end
 
     it "再読文字は 2 度読む" do
@@ -47,8 +47,8 @@ RSpec.describe KanbunParserService do
       it "確定した受身（為A所B・見V・被V於A）は書き下しのまま exact:true" do
         { "彼為敵所殺" => "彼は敵の殺す所と為る", "見殺" => "殺さる", "被殺於敵" => nil }.each do |hakubun, expected|
           result = described_class.call(hakubun)
-          expect(result[:kakikudashi_exact]).to be(true), hakubun
-          expect(result[:kakikudashi_reasons]).to eq([]), hakubun
+          expect(result[:kakikudashi_tree_ok]).to be(true), hakubun # 確認済み印は別（Phase 6a）
+          expect(result[:kakikudashi_reasons].grep_v(/\A(未確認の辞書項目|既定値)/)).to eq([]), hakubun
           expect(result[:kakikudashi]).not_to eq(interim_of(result)), hakubun
           expect(result[:kakikudashi]).to eq(expected) if expected
         end
@@ -73,8 +73,8 @@ RSpec.describe KanbunParserService do
 
       it "違反がなく Yomi が確信していれば exact（検査の結果が理由なしで通る）" do
         result = described_class.call("我読漢文")
-        expect(result[:kakikudashi_exact]).to be true
-        expect(result[:kakikudashi_reasons]).to eq []
+        expect(result[:kakikudashi_tree_ok]).to be true
+        expect(result[:kakikudashi_reasons].grep_v(/\A(未確認の辞書項目|既定値)/)).to eq []
         tree = KanbunParser.new.parse_tree("我読漢文", strict: true)
         expect(Kanbun::Fukubun.check(tree, result[:kakikudashi])).to eq []
       end
@@ -89,8 +89,8 @@ RSpec.describe KanbunParserService do
 
     it "確かに読める句は exact で、理由は空" do
       result = described_class.call("我読漢文")
-      expect(result[:kakikudashi_exact]).to be true
-      expect(result[:kakikudashi_reasons]).to eq []
+      expect(result[:kakikudashi_tree_ok]).to be true
+      expect(result[:kakikudashi_reasons].grep_v(/\A(未確認の辞書項目|既定値)/)).to eq []
     end
 
     it "読みの辞書にない語を含むときは、暫定の書き下し（漢字を読み順に並べたもの）に戻し、exact を false にする" do

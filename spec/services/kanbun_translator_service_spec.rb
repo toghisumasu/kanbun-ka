@@ -52,6 +52,20 @@ RSpec.describe KanbunTranslatorService do
     end
   end
 
+  describe "確認済み印の項目も呼び出し側に返る（Phase 6a S4）" do
+    it "tree_ok・verified・unverified を Result に載せる" do
+      allow(KanbunParserService).to receive(:call).with("我食林檎").and_return(
+        { kunten: "我[レ]食林檎", kakikudashi: "我は林檎を食らふ", kakikudashi_exact: false,
+          kakikudashi_tree_ok: true, kakikudashi_verified: false,
+          kakikudashi_unverified: ["VERBS:食"],
+          kakikudashi_reasons: ["未確認の辞書項目: VERBS:食"] }
+      )
+      expect(result.kakikudashi_tree_ok).to be true
+      expect(result.kakikudashi_verified).to be false
+      expect(result.kakikudashi_unverified).to eq ["VERBS:食"]
+    end
+  end
+
   describe "正常系: BNFパースが成功する場合" do
     it "白文が返る" do
       expect(result.hakubun).to eq "我食林檎"

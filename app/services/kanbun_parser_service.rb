@@ -21,13 +21,17 @@ require Rails.root.join("lib/kanbun/kunten").to_s
 require Rails.root.join("lib/kanbun/kakikudashi").to_s
 require Rails.root.join("lib/kanbun/yomi").to_s
 require Rails.root.join("lib/kanbun/fukubun").to_s
+require Rails.root.join("lib/kanbun/verified_entries").to_s
 
 class KanbunParserService
   # 返り値
   #   kunten:        訓点付き漢文（返り点を [ ] で付記。例: 我読[二]漢文[一]）
   #   kakikudashi:   書き下し文（歴史的仮名遣い）。kakikudashi_exact が false のときは暫定（漢字を読み順に並べただけ）
-  #   kakikudashi_exact: 確かな読みか（Yomi が読みを決められ、かつ復文検査 Kanbun::Fukubun の違反がゼロ）
-  #   kakikudashi_reasons: exact でない理由（辞書にない語・復文検査の不一致・曖昧な句形）
+  #   kakikudashi_exact: 確かな読みか ＝ tree_ok かつ verified（Phase 6a）
+  #   kakikudashi_tree_ok: 従来の exact（Yomi が読みを決められ、かつ復文検査 Kanbun::Fukubun の違反がゼロ）
+  #   kakikudashi_verified: 読みに使った辞書項目がすべて確認済み（lib/kanbun/verified_entries.yml）。既定値で補った読みは確認済みにならない
+  #   kakikudashi_unverified: 使った項目のうち未確認のもの（項目 ID。「表名:キー」「DEFAULT:種類:字」）
+  #   kakikudashi_reasons: exact でない理由（辞書にない語・復文検査の不一致・曖昧な句形・未確認の辞書項目・既定値）
   #   kunten_aozora: 注記つき漢文（正本。Kanbun::Aozora.parse で読み戻せる）
   #   status:        :parsed または :unparsed
   #   error:         nil または解析できなかった理由（文字列）
@@ -44,12 +48,15 @@ class KanbunParserService
     units = Kanbun::Kunten.annotate(tree)
     aozora = Kanbun::Kunten.to_aozora(units)
 
-    kaki, exact, reasons = kakikudashi(tree, aozora)
+    kaki, info = kakikudashi(tree, aozora)
     {
       kunten:        Kanbun::Kunten.to_bracket(units),
       kakikudashi:   kaki,
-      kakikudashi_exact: exact,
-      kakikudashi_reasons: reasons,
+      kakikudashi_exact: info[:exact],
+      kakikudashi_tree_ok: info[:tree_ok],
+      kakikudashi_verified: info[:verified],
+      kakikudashi_unverified: info[:unverified],
+      kakikudashi_reasons: info[:reasons],
       kunten_aozora: aozora,
       status:        :parsed,
       error:         nil
@@ -57,6 +64,13 @@ class KanbunParserService
   rescue KanbunParser::UnknownCharacters, Racc::ParseError, Kanbun::Kunten::Error => e
     unparsed(e)
   end
+
+  # 確認済みの辞書項目の一覧。specs は差し替える。
+  def self.verified_entries
+    @verified_entries ||= Kanbun::VerifiedEntries.load
+  end
+
+  DEFAULT_KINDS = { 'particle' => '助詞を辞書が明示していない', 'form' => '活用形を決める語がない' }.freeze
 
   private
 
@@ -69,11 +83,27 @@ class KanbunParserService
     result = Kanbun::Yomi.analyze(tree)
     violations = Kanbun::Fukubun.check(tree, result.text, parts: result.parts)
     problems = violations + result.ambiguities
-    return [interim(aozora), false, problems] unless problems.empty?
-
-    [result.text, true, []]
+    unverified = self.class.verified_entries.unverified(result.used_entries)
+    tree_ok = problems.empty?
+    verified = unverified.empty?
+    info = { tree_ok: tree_ok, verified: verified, exact: tree_ok && verified,
+             unverified: unverified, reasons: problems + unverified_reasons(unverified) }
+    # 読みが決まらない（tree_ok でない）ときは暫定出力。未確認なだけなら、読みはそのまま返し exact:false と理由で知らせる。
+    [tree_ok ? result.text : interim(aozora), info]
   rescue Kanbun::Yomi::MissingEntry => e
-    [interim(aozora), false, [e.message]]
+    [interim(aozora), { tree_ok: false, verified: false, exact: false, unverified: [], reasons: [e.message] }]
+  end
+
+  # 未確認の辞書項目と既定値を、根拠が分かる形で理由にする。
+  def unverified_reasons(ids)
+    ids.map do |id|
+      if id.start_with?('DEFAULT:')
+        _, kind, surface = id.split(':', 3)
+        "既定値: #{{ 'particle' => '助詞', 'form' => '活用形' }.fetch(kind, kind)}（#{surface}）：#{DEFAULT_KINDS.fetch(kind, kind)}"
+      else
+        "未確認の辞書項目: #{id}"
+      end
+    end
   end
 
   def interim(aozora)
@@ -85,6 +115,9 @@ class KanbunParserService
       kunten:        @hakubun,
       kakikudashi:   @hakubun,
       kakikudashi_exact: false,
+      kakikudashi_tree_ok: false,
+      kakikudashi_verified: false,
+      kakikudashi_unverified: [],
       kakikudashi_reasons: [],
       kunten_aozora: nil,
       status:        :unparsed,
