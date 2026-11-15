@@ -1,4 +1,5 @@
 require "rails_helper"
+require Rails.root.join("lib/kanbun/kanbun_parser.tab").to_s
 require Rails.root.join("lib/kanbun/verified_entries").to_s
 
 # Phase 6a S3: 確認済み印の一覧。本番の一覧（verified_entries.yml）ではなく、ダミー一覧を注入して試す。
@@ -37,6 +38,36 @@ RSpec.describe Kanbun::VerifiedEntries do
   it "知らない表名・辞書にないキーは拒否する（打ち間違いで確認済みにならない）" do
     expect { described_class.new("VERB" => %w[学]) }.to raise_error(described_class::Invalid, /表/)
     expect { described_class.new("VERBS" => %w[虹]) }.to raise_error(described_class::Invalid, /虹/)
+  end
+
+  describe "FUNC（直書きの機能語）と RULE（文法規則）の節（第2段 S10）" do
+    let(:list) { described_class.new("FUNC" => %w[不 乎@silent], "RULE" => ["neg_clause/NEG_BU verb_phrase"]) }
+
+    it "FUNC・RULE の項目も確認済みにできる" do
+      expect(list.verified?("FUNC:不")).to be true
+      expect(list.verified?("FUNC:乎@silent")).to be true
+      expect(list.verified?("RULE:neg_clause/NEG_BU verb_phrase")).to be true
+    end
+
+    it "一覧にない FUNC・RULE は未確認" do
+      expect(list.verified?("FUNC:乎")).to be false
+      expect(list.verified?("RULE:verb_phrase/NOUN NOUN")).to be false
+    end
+
+    it "知らない機能語・規則名は拒否する" do
+      expect { described_class.new("FUNC" => %w[虹]) }.to raise_error(described_class::Invalid, /虹/)
+      expect { described_class.new("RULE" => ["verb_phrase/NOUN NOUN NOUN"]) }.to raise_error(described_class::Invalid, /NOUN NOUN NOUN/)
+    end
+
+    it "Yomi が記録しうる FUNC の ID は、すべて一覧に書ける（書けない ID を出さない）" do
+      ids = %w[不学 彼非君子也 学而不行 入於深林焉 若学則楽 不得不知 不可不行 王使臣行 彼為敵所殺 見殺 人莫若友 非徒無益而又害之
+               我読漢文 未知故郷事 入乎深林 学乎 其疾如風 与友飲酒 彼自鹿児島来 勿待人 無所知 学哉 学邪 彼被殺].flat_map do |h|
+        tree = KanbunParser.new.parse_tree(h, strict: true)
+        Kanbun::Yomi.analyze(tree).used_entries.grep(/\A(FUNC|RULE):/)
+      end.uniq
+      expect(ids).not_to be_empty
+      expect { described_class.new(ids.group_by { |i| i[/\A\w+/] }.transform_values { |v| v.map { |i| i.sub(/\A\w+:/, "") } }) }.not_to raise_error
+    end
   end
 
   describe "ファイルの読み込み" do

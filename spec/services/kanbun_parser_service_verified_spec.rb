@@ -57,6 +57,45 @@ RSpec.describe KanbunParserService, "確認済み印（Phase 6a）" do
     end
   end
 
+  describe "FUNC・RULE も確認済みでなければ exact にならない（第2段 S10）" do
+    let(:all_for_nusu) do
+      { "VERBS" => %w[学], "FUNC" => %w[不], "RULE" => ["neg_clause/NEG_BU verb_phrase", "pred_tr/VERB"] }
+    end
+
+    it "辞書・機能語・規則がすべて確認済みなら exact:true・理由なし（不学）" do
+      stub_verified(all_for_nusu)
+      r = described_class.call("不学")
+      expect(r[:kakikudashi_unverified]).to eq []
+      expect(r[:kakikudashi_exact]).to be true
+      expect(r[:kakikudashi_reasons]).to eq []
+    end
+
+    it "規則だけ未確認なら exact:false。理由は「未確認の規則」（コメントつき）" do
+      stub_verified(all_for_nusu.merge("RULE" => ["pred_tr/VERB"]))
+      r = described_class.call("不学")
+      expect(r[:kakikudashi_exact]).to be false
+      expect(r[:kakikudashi_reasons]).to eq ["未確認の規則: neg_clause/NEG_BU verb_phrase"]
+    end
+
+    it "機能語だけ未確認なら exact:false。理由は「未確認の機能語」" do
+      stub_verified(all_for_nusu.merge("FUNC" => []))
+      r = described_class.call("不学")
+      expect(r[:kakikudashi_exact]).to be false
+      expect(r[:kakikudashi_reasons]).to eq ["未確認の機能語: 不"]
+    end
+
+    it "規則名にコメントがあれば理由に添える（名詞述語）" do
+      reasons = described_class.call("孔子聖人")[:kakikudashi_reasons]
+      expect(reasons).to include("未確認の規則: verb_phrase/NOUN NOUN（① 孔子聖人（名詞述語））")
+    end
+
+    it "一覧が空なら、名詞と機能語だけの文（無非王土・孔子聖人・孔子君子）も exact:false" do
+      %w[無非王土 孔子聖人 孔子君子 王 我 無水 君子也].each do |h|
+        expect(described_class.call(h)[:kakikudashi_exact]).to be(false), h
+      end
+    end
+  end
+
   describe "tree_ok と verified は独立" do
     let(:broken) { Kanbun::Yomi::Result.new("我は読む", [], nil, []) } # 漢文 が欠落。使った項目はなし（＝全部確認済み）
 

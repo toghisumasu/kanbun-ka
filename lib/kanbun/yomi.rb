@@ -124,6 +124,15 @@ module Kanbun
     FUNC_CHARS = %w[不 弗 可 而 矣 焉 也 乎 哉 邪 於 于 所 者 則 若 非 無 莫 勿 使 令 被 自 従 与 其].freeze
     FUNC_ROLES = %i[ruika_adv ruika_neg ruika_ji hikyo compare compare_neg ukemi ukemi_mi dneg].freeze
 
+    # used_entries に FUNC:<キー> として現れうるキーの全部（確認済み一覧に書ける機能語）。
+    FUNC_KEYS = (
+      FUNC_CHARS.map { |c| c == '乎' ? ['乎', '乎@silent'] : [c] }.flatten +
+      { ruika_adv: %w[徒 唯 独], ruika_neg: %w[非 不], ruika_ji: %w[而], hikyo: %w[如 若], compare: %w[如 若],
+        compare_neg: %w[莫 不], ukemi: %w[為], ukemi_mi: %w[見], dneg: %w[不 得 可] }
+        .flat_map { |role, chars| chars.map { |c| "#{c}@#{role}" } } +
+      %w[主題は 二名詞の]
+    ).uniq.freeze
+
     # 代名詞の主語（は を付ける）
     PRONOUNS = %w[我 吾 汝 彼 私 此 是].freeze
 

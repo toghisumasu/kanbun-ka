@@ -66,6 +66,17 @@ RSpec.describe KanbunTranslatorService do
     end
   end
 
+  describe "未確認の規則・機能語は Result まで届く（第2段 S10。実際の KanbunParserService を通す）" do
+    it "孔子聖人（名詞述語）は exact:false で、未確認の規則が reasons に出る" do
+      allow_any_instance_of(described_class).to receive(:call_ollama).and_return("孔子聖人")
+      allow(KanbunParserService).to receive(:call).and_call_original
+      expect(result.kakikudashi_exact).to be false
+      expect(result.kakikudashi_tree_ok).to be true
+      expect(result.kakikudashi_reasons).to include(a_string_matching(/\A未確認の規則: verb_phrase\/NOUN NOUN/))
+      expect(result.kakikudashi_unverified).to include("RULE:verb_phrase/NOUN NOUN")
+    end
+  end
+
   describe "正常系: BNFパースが成功する場合" do
     it "白文が返る" do
       expect(result.hakubun).to eq "我食林檎"

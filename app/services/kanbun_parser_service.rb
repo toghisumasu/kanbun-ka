@@ -70,6 +70,8 @@ class KanbunParserService
     @verified_entries ||= Kanbun::VerifiedEntries.load
   end
 
+  RULE_COMMENTS = Kanbun::RuleIds::TABLE.values.to_h { |name, comment| [name, comment] }.freeze
+
   DEFAULT_KINDS = { 'particle' => '助詞を辞書が明示していない', 'form' => '活用形を決める語がない' }.freeze
 
   private
@@ -97,7 +99,13 @@ class KanbunParserService
   # 未確認の辞書項目と既定値を、根拠が分かる形で理由にする。
   def unverified_reasons(ids)
     ids.map do |id|
-      if id.start_with?('DEFAULT:')
+      if id.start_with?('FUNC:')
+        "未確認の機能語: #{id.delete_prefix('FUNC:')}"
+      elsif id.start_with?('RULE:')
+        name = id.delete_prefix('RULE:')
+        comment = RULE_COMMENTS[name]
+        "未確認の規則: #{name}#{"（#{comment}）" if comment}"
+      elsif id.start_with?('DEFAULT:')
         _, kind, surface = id.split(':', 3)
         "既定値: #{{ 'particle' => '助詞', 'form' => '活用形' }.fetch(kind, kind)}（#{surface}）：#{DEFAULT_KINDS.fetch(kind, kind)}"
       else

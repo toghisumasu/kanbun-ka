@@ -5,7 +5,9 @@
 #   ADVS:
 #     - 皆
 #
-# 使える表：VERBS ADJS ADVS ADV_WHOLE SAIDOKU SAIDOKU_SECOND
+# 使える表：VERBS ADJS ADVS ADV_WHOLE SAIDOKU SAIDOKU_SECOND FUNC RULE
+#   FUNC は render に直書きした機能語（例 不／乎@silent／若@hikyo／主題は）。キーの一覧は Kanbun::Yomi::FUNC_KEYS。
+#   RULE は木を組んだ文法規則の名前（例 neg_clause/NEG_BU verb_phrase）。名前の一覧は lib/kanbun/rule_ids.rb。
 #   SAIDOKU は再読文字の 1 度目の読み（Lexicon::SAIDOKU）、SAIDOKU_SECOND は 2 度目の読み。
 # 辞書にないキーは読み込み時に拒否する。DEFAULT（既定値で補った読み）は確認済みにできない。
 # 項目を確認済みにするには、読みを参考書等で確認し、必要なら辞書に明示的なデータを足してから、ここに書く。

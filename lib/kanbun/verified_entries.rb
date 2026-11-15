@@ -2,6 +2,7 @@
 
 require 'yaml'
 require_relative 'yomi'
+require_relative 'rule_ids'
 
 module Kanbun
   # 読みを確認済みの辞書項目の一覧（Phase 6a）。項目 ID は「表名:キー」（Yomi::Result#used_entries）。
@@ -14,7 +15,10 @@ module Kanbun
     TABLES = {
       'VERBS' => -> { Yomi::VERBS }, 'ADJS' => -> { Yomi::ADJS }, 'ADVS' => -> { Yomi::ADVS },
       'ADV_WHOLE' => -> { Yomi::ADV_WHOLE }, 'SAIDOKU' => -> { Lexicon::SAIDOKU },
-      'SAIDOKU_SECOND' => -> { Yomi::SAIDOKU_SECOND }
+      'SAIDOKU_SECOND' => -> { Yomi::SAIDOKU_SECOND },
+      # 第2段：辞書の表の外の読みの出どころ。FUNC は render に直書きした機能語、RULE は木を組んだ文法規則。
+      'FUNC' => -> { Yomi::FUNC_KEYS.to_h { |k| [k, true] } },
+      'RULE' => -> { RuleIds::TABLE.values.to_h { |name, _| [name, true] } }
     }.freeze
 
     def self.load(path = DEFAULT_PATH)
