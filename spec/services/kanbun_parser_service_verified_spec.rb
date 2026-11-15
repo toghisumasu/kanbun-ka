@@ -26,19 +26,17 @@ RSpec.describe KanbunParserService, "確認済み印（Phase 6a）" do
     end
 
     it "使った項目は kakikudashi_unverified として返る" do
-      expect(described_class.call("我読漢文")[:kakikudashi_unverified]).to match_array(%w[VERBS:読 DEFAULT:particle:読])
+      expect(described_class.call("我読漢文")[:kakikudashi_unverified]).to match_array(%w[VERBS:読 DEFAULT:particle:読 FUNC:主題は])
     end
   end
 
   describe "ダミーの確認済み一覧を注入" do
-    it "使った項目がすべて確認済みなら exact:true・理由なし" do
+    it "辞書項目を確認済みにしても、直書きの機能語（FUNC:不）が未確認なら exact:false（第2段 S8）" do
       stub_verified("VERBS" => %w[学])
-      r = described_class.call("不学") # 使う項目は VERBS:学 だけ（名詞なし・既定値なし）
+      r = described_class.call("不学") # 使う項目は VERBS:学 と FUNC:不
       expect(r[:kakikudashi_tree_ok]).to be true
-      expect(r[:kakikudashi_verified]).to be true
-      expect(r[:kakikudashi_exact]).to be true
-      expect(r[:kakikudashi_reasons]).to eq []
-      expect(r[:kakikudashi_unverified]).to eq []
+      expect(r[:kakikudashi_exact]).to be false
+      expect(r[:kakikudashi_unverified]).to eq ["FUNC:不"]
     end
 
     it "動詞を確認済みにしても、既定の助詞を使えば exact:false（既定値だけが理由に残る）" do
@@ -46,15 +44,15 @@ RSpec.describe KanbunParserService, "確認済み印（Phase 6a）" do
       r = described_class.call("我読漢文")
       expect(r[:kakikudashi_verified]).to be false
       expect(r[:kakikudashi_exact]).to be false
-      expect(r[:kakikudashi_reasons].size).to eq 1
-      expect(r[:kakikudashi_reasons].first).to match(/\A既定値: 助詞（読）/)
-      expect(r[:kakikudashi_reasons].grep(/未確認の辞書項目/)).to be_empty
+      expect(r[:kakikudashi_reasons]).to include(a_string_matching(/\A既定値: 助詞（読）/))
+      expect(r[:kakikudashi_reasons].grep(/未確認の辞書項目: VERBS/)).to be_empty
     end
 
     it "助詞を明示した動詞（入）なら、確認済みで exact:true になる" do
       stub_verified("VERBS" => %w[入])
       r = described_class.call("返景入深林")
-      expect(r[:kakikudashi_exact]).to be true
+      expect(r[:kakikudashi_unverified]).to eq [] # 辞書項目（入）に未確認はない。FUNC・RULE は第2段 S10 以降
+      expect(r[:kakikudashi_verified]).to be true
     end
   end
 

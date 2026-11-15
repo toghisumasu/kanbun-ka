@@ -118,6 +118,11 @@ module Kanbun
       '盍' => [%w[ざる ざる], { form: :mizen }]
     }.freeze
 
+    # 読みを render に直書きしている機能語（辞書の表にない）。used_entries には FUNC:<字> で記録する（Phase 6a 第2段）。
+    # role で読みが分かれるものは FUNC:<字>@<role>、置字の 乎 は FUNC:乎@silent。
+    FUNC_CHARS = %w[不 弗 可 而 矣 焉 也 乎 哉 邪 於 于 所 者 則 若 非 無 莫 勿 使 令 被 自 従 与 其].freeze
+    FUNC_ROLES = %i[ruika_adv ruika_neg ruika_ji hikyo compare compare_neg ukemi ukemi_mi dneg].freeze
+
     # 代名詞の主語（は を付ける）
     PRONOUNS = %w[我 吾 汝 彼 私 此 是].freeze
 
@@ -238,7 +243,9 @@ module Kanbun
         case kind
         when :comp then defaults.include?(:comp)
         when :obj then defaults.include?(:obj)
-        else obj_idx == 1 ? defaults.include?(:obj) && verb[:cases].nil? : false # 二名詞の 2 つ目は obj（cases があれば明示）
+        else # 二名詞：1 つ目の「の」は直書き（cases の定めがなければ）、2 つ目は obj（cases があれば明示）
+          note('FUNC:二名詞の') if obj_idx.zero? && verb[:cases].nil?
+          obj_idx == 1 ? defaults.include?(:obj) && verb[:cases].nil? : false
         end
       note("DEFAULT:particle:#{head.surface}") if used_default
     end
@@ -277,6 +284,7 @@ module Kanbun
     # demand: { form:, vpart:（動詞・助動詞に付く助詞）, npart:（名詞に付く助詞）, suffix: }
     def render(items, idx, dem)
       it = items[idx]
+      note_func(it)
       case it.role
       when :ruika_adv then return ruika_adv(it, dem)
       when :ruika_neg then return ruika_neg(it, dem)
@@ -320,6 +328,15 @@ module Kanbun
       when '其' then ['其の', { form: :renyo }]
       else
         render_content(items, idx, dem)
+      end
+    end
+
+    # 直書きの機能語の読みを使うとき、項目 ID を記録する。
+    def note_func(item)
+      if FUNC_ROLES.include?(item.role)
+        note("FUNC:#{item.surface}@#{item.role}")
+      elsif !item.leaf.saidoku? && FUNC_CHARS.include?(item.surface)
+        note("FUNC:#{item.surface}#{'@silent' if item.surface == '乎' && item.leaf.silent?}")
       end
     end
 
@@ -511,7 +528,10 @@ module Kanbun
       return if first.npart || out[0] != first.surface   # 助詞がすでに付いている
 
       nominal = items.any? { |i| %i[hikyo compare ukemi].include?(i.role) || i.surface == '非' }
-      out[0] = out[0] + 'は' if PRONOUNS.include?(first.surface) || (nominal && items.size > 1)
+      return unless PRONOUNS.include?(first.surface) || (nominal && items.size > 1)
+
+      note('FUNC:主題は')
+      out[0] = out[0] + 'は'
     end
   end
 end
