@@ -41,8 +41,12 @@ module Kanbun
 
     # 動詞：表層形 => [活用の表, 補語の助詞 comp, 目的語の助詞 obj, 二名詞の助詞 cases]
     # obj は 述語の直前の名詞（読漢文→漢文を）、comp は 於 の後の名詞（問礼於老子→老子に）。
-    def self.v(forms, obj: 'を', comp: 'に', cases: nil)
-      { kind: :verb, forms: forms, obj: obj, comp: comp, cases: cases }.freeze
+    # obj／comp を明示しなかったとき（既定の を／に になるとき）は defaults に記録する（Phase 6a。読みは変えない）。
+    def self.v(forms, obj: nil, comp: nil, cases: nil)
+      defaults = []
+      defaults << :obj if obj.nil?
+      defaults << :comp if comp.nil?
+      { kind: :verb, forms: forms, obj: obj || 'を', comp: comp || 'に', cases: cases, defaults: defaults.freeze }.freeze
     end
 
     VERBS = {
@@ -131,7 +135,8 @@ module Kanbun
     # text: 書き下し／ambiguities: 読みが 1 つに決まらない句形（パーサーが木に付けた理由）。
     # 書き下しが白文と矛盾しないかは Kanbun::Fukubun が別に検査する（Yomi の自己申告にしない）。
     # parts: 項目ごとの出力 [Piece]（読む順。つなぐと text になる）。Fukubun が項目単位の検査に使う。
-    Result = Struct.new(:text, :ambiguities, :parts) do
+    # used_entries: 読みを作るのに使った辞書項目の ID（「表名:キー」。既定値で補ったときは「DEFAULT:種類:字」）。名詞は対象外。
+    Result = Struct.new(:text, :ambiguities, :parts, :used_entries) do
       # Yomi が「読みは 1 つに決まる」と確信しているか（exact の必要条件。十分条件ではない）
       def exact? = ambiguities.empty?
     end
@@ -143,15 +148,33 @@ module Kanbun
 
     # 書き下しと、曖昧な句形の一覧。
     def analyze(tree)
-      items = collect(tree)
-      out = Array.new(items.size, '')
-      demand = { form: :shushi }
-      (items.size - 1).downto(0) do |i|
-        out[i], demand = render(items, i, demand)
+      (result, used) = collecting do
+        items = collect(tree)
+        out = Array.new(items.size, '')
+        demand = { form: :shushi }
+        (items.size - 1).downto(0) do |i|
+          out[i], demand = render(items, i, demand)
+        end
+        add_topic!(items, out)
+        parts = items.each_with_index.map { |it, i| Piece.new(it.leaf, it.second, out[i]) }
+        [out.join, parts]
       end
-      add_topic!(items, out)
-      parts = items.each_with_index.map { |it, i| Piece.new(it.leaf, it.second, out[i]) }
-      Result.new(out.join, ambiguities(tree), parts)
+      Result.new(result[0], ambiguities(tree), result[1], used)
+    end
+
+    # ブロックの間に引いた辞書項目の ID を集める。[ブロックの値, ID の配列（重複なし）] を返す。
+    def collecting
+      outer = Thread.current[:yomi_used]
+      Thread.current[:yomi_used] = []
+      value = yield
+      [value, Thread.current[:yomi_used].uniq]
+    ensure
+      Thread.current[:yomi_used] = outer
+    end
+
+    # 辞書項目の使用を記録する（collecting の外では何もしない）。
+    def note(id)
+      Thread.current[:yomi_used]&.push(id)
     end
 
     # ---- 曖昧な句形 ----
@@ -193,14 +216,31 @@ module Kanbun
         if child.silent?
           after_prep = true
         elsif noun_like?(child, head)
+          kind = after_prep ? :comp : (cases[:list] ? :list : :obj)
           case_of[child] =
             if after_prep then cases[:comp]
             elsif cases[:list] then cases[:list][obj_idx]
             else cases[:obj]
             end
+          note_default_particle(head, kind, obj_idx)
           obj_idx += 1
         end
       end
+    end
+
+    # 動詞が助詞を明示していないのに、その既定の助詞を名詞に付けたとき DEFAULT:particle を記録する。
+    def note_default_particle(head, kind, obj_idx)
+      verb = VERBS[head.surface]
+      return unless verb && head.role.nil?
+
+      defaults = verb[:defaults]
+      used_default =
+        case kind
+        when :comp then defaults.include?(:comp)
+        when :obj then defaults.include?(:obj)
+        else obj_idx == 1 ? defaults.include?(:obj) && verb[:cases].nil? : false # 二名詞の 2 つ目は obj（cases があれば明示）
+        end
+      note("DEFAULT:particle:#{head.surface}") if used_default
     end
 
     # 名詞。辞書が動詞にしている字（書・言）でも、動詞の目的語の位置に来れば名詞として扱う（読書 → 書を読む）
@@ -353,8 +393,10 @@ module Kanbun
       elsif token == :NOUN
         [surf + it_part(it, dem), { form: :renyo }]
       elsif ADV_WHOLE.key?(surf)
+        note("ADV_WHOLE:#{surf}")
         [ADV_WHOLE[surf], { form: :renyo }]
       elsif ADVS.key?(surf)
+        note("ADVS:#{surf}")
         [surf + ADVS[surf], { form: :renyo }]
       else
         raise MissingEntry, "読みの辞書にありません: #{surf}"
@@ -364,12 +406,14 @@ module Kanbun
     def form_for(items, idx, dem)
       return [:rentai, 'こと'] if nominalized?(items, idx) && dem[:form] != :mizen
 
+      note("DEFAULT:form:#{items[idx].surface}") if dem[:form].nil?
       [dem[:form] || :shushi, nil]
     end
 
     def conjugate_verb(items, idx, dem)
       surf = items[idx].surface
       form, suffix = form_for(items, idx, dem)
+      note("VERBS:#{surf}")
       ending = VERBS.fetch(surf)[:forms][FORMS.index(form) || 2]
       [surf + ending + suffix.to_s + dem[:vpart].to_s + dem[:suffix].to_s, verb_demand(items, idx, dem)]
     end
@@ -398,6 +442,7 @@ module Kanbun
 
     def conjugate_adj(items, idx, dem)
       surf = items[idx].surface
+      note("ADJS:#{surf}")
       type, stem = ADJS.fetch(surf)
       form, suffix = form_for(items, idx, dem)
       ending = ADJ_ENDINGS.fetch(type)[FORMS.index(form) || 2]
@@ -408,10 +453,12 @@ module Kanbun
     def saidoku(item, dem)
       r = item.leaf.saidoku
       unless item.second
+        note("SAIDOKU:#{item.surface}")
         okuri = r[:okuri].tr('ァ-ヶ', 'ぁ-ゖ')
         return [item.surface + okuri, { form: :renyo }]
       end
 
+      note("SAIDOKU_SECOND:#{item.surface}")
       forms, own = SAIDOKU_SECOND.fetch(item.surface)
       text = dem[:form] == :rentai ? forms[1] : forms[0]
       [text + dem[:vpart].to_s + dem[:suffix].to_s, own]
