@@ -2,6 +2,8 @@
 
 第1段（HEAD=9c5da11）で、`verified_entries.yml` が空のまま `kakikudashi_exact: true` になる文。363 文（bench の期待白文と別表記＋spec に出る漢字の文。`script/exact_wide_report.rb` と同じ集め方）のうち **28 文**。
 どれも使った辞書項目が空（名詞と、`render` に直書きされた機能語だけ）なので「全部確認済み」と数えられている。
+**追記（第2段 S10 の後）**：この 28 文は、FUNC と RULE を使った項目として数えるようにしたので、確認済み一覧が空のとき exact:false になった（363 文で exact:true は 0 件）。下の表は第1段（9c5da11）の時点のもの。
+
 この表はコードを変えずに `KanbunParserService.call` の出力から作った。あなたが目で見て誤りを数える材料。
 
 「筆者の見立て」列は私の判断で、参考書とは照合していない。空欄は「誤りに見えない」。

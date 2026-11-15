@@ -230,3 +230,174 @@ dneg（得・可）、ukemi_i（為）、hikyo（如）、compare_verb／compare
 - 規則名は右辺の記号列そのものなので、文法の規則を書き換えると名前が変わり、確認済み印は外れる（意図した動作）。左辺名や規則の並びの変更だけでは変わらない。
 
 注意（案3 の前提）：Racc の `_reduce_N` が、C 拡張の構文解析でも `rb_funcall` 経由で呼ばれること（この環境は C 拡張で動いている＝`_racc_do_parse_c`。試作はこの方式で確認。純 Ruby 実装での動作は未確認）。
+
+
+## A. bench 47/50 の切り分け（コードを変えない）
+
+方法：`git worktree` で 3 点（作業ブランチは動かしていない）を作り、同じマシン・同じ Ollama で `bin/rails runner script/translate_bench.rb script/bench_expected.tsv` を各 3 回。
+設定（3 点とも `app/services/kanbun_translator_service.rb` の同じ値）：モデル `qwen3:8b`（`OLLAMA_MODEL`）、`temperature: 0.0`、`num_predict: 200`、`think: false`、`stream: false`。
+（第1段までの私の記述で「qwen3-14b」としていたのは誤り。コードの定数は `qwen3:8b`。）
+
+| 点 | コミット | 1 回目 | 2 回目 | 3 回目 |
+|---|---|---|---|---|
+| (1) S9 のプロンプト変更の前 | 79f7965（3808c29 の親） | 一致率 48/50・解析率 49/50 | 48/50・49/50 | 48/50・49/50 |
+| (2) S9 のプロンプト変更の後 | 3808c29 | 47/50・49/50 | 47/50・49/50 | 47/50・49/50 |
+| (3) HEAD（取得時＝第1段の終点 9c5da11） | 9c5da11 | 47/50・49/50 | 47/50・49/50 | 47/50・49/50 |
+
+- 各点で 3 回の出力は 1 文字も違わない（`diff` が空）。温度 0 なので LLM のばらつきは観測されなかった。
+- (1)→(2) の差は 3 文：
+  1. 彼は賊に殺された：`彼殺於賊`（期待に一致）→ `彼被殺於賊`（解析は通るが、期待の 4 形に入っていない）。**これで 1 件減った**。
+  2. 先生は学生に教える：`先生教於学生` → `先生教学生`（どちらも期待に一致。差し引きなし）。
+  3. 美しい花が咲いている：`花美開` → `花美咲`（どちらも不一致。後者は解析も失敗：`咲` が VERB_I）。(1) でも (2) でも不一致のまま。
+- **結論：S9 のプロンプト変更が落とした**（ばらつきではない）。落ちた 1 文は、新しい出力 `彼被殺於賊` が正しい形（被B於A。受身が確定して exact:true）なのに、`bench_expected.tsv` の期待白文に 被B於A が入っていないために不一致と数えられている。誤訳が増えたのではなく、期待表が古い。
+- (3) の HEAD は第1段の終点（S7 以降の変更前）。第2段の最終コードでの 1 回は、下の「完了の確認」に別に記録する。
+
+## S8〜S11 の実装（各段 spec 先行、段ごとに別コミット）
+
+| 段 | コミット | 内容 | 赤の確認（機能ごとの失敗） |
+|---|---|---|---|
+| S7 | 29c0e72 | P0 の記録、docs/phase6-exact28.md、`script/gen_rule_ids.rb`・`lib/kanbun/rule_ids.rb` | － |
+| S8 | ecca764 | `FUNC:<字>`（役割で分かれるものは `FUNC:<字>@<role>`、置字の乎は `FUNC:乎@silent`、`FUNC:主題は`） | 31 例中 28 例が失敗（used_entries に FUNC がない） |
+| S9 | 5e81f67 | `RULE:<規則名>`。`lib/kanbun/rule_trace.rb` が `_reduce_N` を包んで節点に規則名を付ける。`Tree` に `rule` を追加 | 13 例中 10 例が失敗 |
+| S10 | 14d4200・a33e21c | `verified_entries.yml` に FUNC・RULE の節。reasons に「未確認の機能語」「未確認の規則（.y のコメントつき）」。Translator::Result・REPL まで。補正：二名詞の「の」は `DEFAULT:cases:<字>` | 8 例が失敗（節なし）。補正は 1 例が失敗 |
+| S11 | c2a5898 | `Kanbun::UsageRanking`、exact レポート 2 本に種類別ランキング | 5 例中 5 例が失敗（空のモジュールに対して） |
+
+### 判断・逸脱
+1. **規則IDは案3**（`.y` は変えない）：P0 のとおり。`.y` は 9c5da11 から差分なし。
+2. 規則名は `左辺/右辺の記号`（例 `verb_phrase/NOUN NOUN`）。表は `script/gen_rule_ids.rb` が `.y` から作り、spec が `.y` との一致と Racc の `_reduce_N` の数との一致を確かめる。`.y` を変えたら作り直す。
+3. 名詞述語の「なり」：規則名 `verb_phrase/NOUN NOUN`（コメント「① 孔子聖人（名詞述語）」）を使った扱いで、未確認として見える。`RULE:名詞述語` という別名は作らず、この規則名を使った（規則名のほうが無非王土 の誤りも同時に塞ぐため）。
+4. **二名詞の「の」を FUNC から DEFAULT:cases に変えた**：当初 `FUNC:二名詞の` としたが、これだと一度確認済みにすれば 陽貨帰孔子豚（帰 に cases の定めがない）が exact:true に戻る。動詞が `cases` を持たないときの既定なので `DEFAULT:cases:<動詞>`（確認済みにできない）にした。
+5. 既存 spec の変更：第1段の spec のうち、FUNC・RULE が増えたことで期待が変わる 7 例の期待値を更新した（`kanbun_parser_service_spec`・`kanbun_parser_service_verified_spec`・`yomi_func_entries_spec`）。意味は「辞書項目だけ確認済みでは exact にならない」への更新。
+
+## 完了の確認（実測）
+
+| 項目 | 実測 |
+|---|---|
+| RSpec | 834 examples, 0 failures, 25 pending（pending は 25 のまま） |
+| Racc 衝突 | 0（`.y`・生成物は不変） |
+| 363 文：tree_ok | **257**（第1段と同じ） |
+| 363 文：書き下し | phase5b 末尾の旧コードの出力と**全文同一**（`diff` 空） |
+| 363 文：exact:true | **0 件**（第1段は 28 件。空の一覧で exact:true は 0） |
+| 現在の spec を含む 367 文（spec を足したぶん増えた）| 解析 309 / tree_ok 260 / verified 0 / exact 0 |
+| bench の期待白文 50 行（`exact_report.rb`）| tree_ok 41（第1段と同じ）／verified 0／exact 0 |
+
+「363 文」は第1段と同じ文の集合（`script/exact_wide_report.rb` と同じ集め方で、spec を足す前の集合を固定して比較）。`exact_wide_report.rb` を今の spec 込みで走らせると 367 文になる。
+
+### 22 項目の再実行（`KanbunParserService.call`。空の一覧）
+
+空の一覧：全 26 行（22 項目の文の合計）で tree_ok:true／verified:false／**exact:false**。無非王土・孔子聖人・孔子君子 も exact:false になった（理由：未確認の規則 `verb_phrase/NOUN NOUN` ほか）。
+
+| # | 白文 | 書き下し | tree_ok | verified | exact | 未確認の内訳（RULE／FUNC／DEFAULT／辞書の件数） |
+|---|---|---|---|---|---|---|
+| 1 | 無非王土 | 王は土に非ざる無し | true | false | false | RULE2 FUNC3 |
+| 2 | 無人不飲 | 人無く飲まず | true | false | false | RULE5 FUNC2 辞書1 |
+| 3 | 学与 | 学び | true | false | false | RULE2 FUNC1 辞書1 |
+| 3 | 君学与 | 君学び | true | false | false | RULE3 FUNC1 辞書1 |
+| 4 | 孔子聖人 | 孔子聖人 | true | false | false | RULE1 |
+| 4 | 孔子君子 | 孔子君子 | true | false | false | RULE1 |
+| 5 | 陽貨帰孔子豚 | 陽貨孔子の豚に帰る | true | false | false | RULE2 DEFAULT1 辞書1 |
+| 6 | 王命臣行 | 王臣を命じ行く | true | false | false | RULE3 DEFAULT1 辞書2 |
+| 7 | 行楽須及春 | 行楽須らく春を及ぶべし | true | false | false | RULE3 DEFAULT1 辞書3 |
+| 8 | 随風潜入夜 | 風を随ひ潜かに夜に入る | true | false | false | RULE2 DEFAULT1 辞書3 |
+| 9 | 勿施人 | 人を施すこと勿かれ | true | false | false | RULE2 DEFAULT1 FUNC1 辞書1 |
+| 10 | 人対客 | 人客を対ふ | true | false | false | RULE2 DEFAULT1 辞書1 |
+| 11 | 復照青苔上 | 復た青苔の上を照る | true | false | false | RULE2 DEFAULT2 辞書2 |
+| 12 | 散入春風満洛城 | 散春の風に入り洛城を満つ | true | false | false | RULE3 DEFAULT2 辞書3 |
+| 13 | 花重錦官城 | 花錦官城を重ぬ | true | false | false | RULE2 DEFAULT1 辞書1 |
+| 14 | 遺愛寺鐘欹枕聴 | 遺愛寺鐘枕を欹ち聴く | true | false | false | RULE3 DEFAULT1 辞書2 |
+| 15 | 何人不起故園情 | 何人故園の情を起きず | true | false | false | RULE3 DEFAULT2 FUNC1 辞書1 |
+| 16 | 彼得名 | 彼は名を得 | true | false | false | RULE2 DEFAULT1 FUNC1 辞書1 |
+| 17 | 彼陥敵 | 彼は敵を陥る | true | false | false | RULE2 DEFAULT1 FUNC1 辞書1 |
+| 18 | 彼為王 | 彼は王を為す | true | false | false | RULE2 DEFAULT1 FUNC1 辞書1 |
+| 19 | 彼賢友 | 彼は友賢し | true | false | false | RULE2 FUNC1 辞書1 |
+| 20 | 不亦大乎 | 亦た大ほからずや | true | false | false | RULE2 FUNC2 辞書2 |
+| 20 | 不大 | 大ほからず | true | false | false | RULE2 FUNC1 辞書1 |
+| 21 | 不尽知 | 尽く知らず | true | false | false | RULE3 FUNC1 辞書2 |
+| 21 | 不甚美 | 甚だ美しからず | true | false | false | RULE3 FUNC1 辞書2 |
+| 22 | 氷莫如水冷 | 氷は水冷たくに如くは莫し | true | false | false | RULE4 FUNC3 辞書1 |
+
+### 重要な検証：辞書項目と FUNC をすべて確認済みにした仮の一覧（テスト内だけ。本番の yml は空のまま）
+
+構造の誤り 5 件（無非王土・無人不飲・陽貨帰孔子豚・王命臣行・氷莫如水冷）と検査機構の穴 2 件（学与・孔子聖人）を含め、**26 行すべて exact:false のまま**。理由は RULE 未確認（一部は DEFAULT 未確認も）。
+
+| # | 白文 | 書き下し | tree_ok | verified | exact | 未確認の内訳（RULE／FUNC／DEFAULT／辞書の件数） |
+|---|---|---|---|---|---|---|
+| 1 | 無非王土 | 王は土に非ざる無し | true | false | false | RULE2 |
+| 2 | 無人不飲 | 人無く飲まず | true | false | false | RULE5 |
+| 3 | 学与 | 学び | true | false | false | RULE2 |
+| 3 | 君学与 | 君学び | true | false | false | RULE3 |
+| 4 | 孔子聖人 | 孔子聖人 | true | false | false | RULE1 |
+| 4 | 孔子君子 | 孔子君子 | true | false | false | RULE1 |
+| 5 | 陽貨帰孔子豚 | 陽貨孔子の豚に帰る | true | false | false | RULE2 DEFAULT1 |
+| 6 | 王命臣行 | 王臣を命じ行く | true | false | false | RULE3 DEFAULT1 |
+| 7 | 行楽須及春 | 行楽須らく春を及ぶべし | true | false | false | RULE3 DEFAULT1 |
+| 8 | 随風潜入夜 | 風を随ひ潜かに夜に入る | true | false | false | RULE2 DEFAULT1 |
+| 9 | 勿施人 | 人を施すこと勿かれ | true | false | false | RULE2 DEFAULT1 |
+| 10 | 人対客 | 人客を対ふ | true | false | false | RULE2 DEFAULT1 |
+| 11 | 復照青苔上 | 復た青苔の上を照る | true | false | false | RULE2 DEFAULT2 |
+| 12 | 散入春風満洛城 | 散春の風に入り洛城を満つ | true | false | false | RULE3 DEFAULT2 |
+| 13 | 花重錦官城 | 花錦官城を重ぬ | true | false | false | RULE2 DEFAULT1 |
+| 14 | 遺愛寺鐘欹枕聴 | 遺愛寺鐘枕を欹ち聴く | true | false | false | RULE3 DEFAULT1 |
+| 15 | 何人不起故園情 | 何人故園の情を起きず | true | false | false | RULE3 DEFAULT2 |
+| 16 | 彼得名 | 彼は名を得 | true | false | false | RULE2 DEFAULT1 |
+| 17 | 彼陥敵 | 彼は敵を陥る | true | false | false | RULE2 DEFAULT1 |
+| 18 | 彼為王 | 彼は王を為す | true | false | false | RULE2 DEFAULT1 |
+| 19 | 彼賢友 | 彼は友賢し | true | false | false | RULE2 |
+| 20 | 不亦大乎 | 亦た大ほからずや | true | false | false | RULE2 |
+| 20 | 不大 | 大ほからず | true | false | false | RULE2 |
+| 21 | 不尽知 | 尽く知らず | true | false | false | RULE3 |
+| 21 | 不甚美 | 甚だ美しからず | true | false | false | RULE3 |
+| 22 | 氷莫如水冷 | 氷は水冷たくに如くは莫し | true | false | false | RULE4 |
+
+### 参考：RULE も（`verb_phrase/NOUN NOUN` と `shitsumon_clause/verb_phrase YO_NIMO` 以外を）すべて確認済みにしたら？
+
+辞書項目・FUNC・RULE をほぼ全部確認済みにすると、次の 7 行が exact:true に戻る（`DEFAULT` が出ない文だけ）。
+
+| # | 白文 | 書き下し | tree_ok | verified | exact | 未確認の内訳（RULE／FUNC／DEFAULT／辞書の件数） |
+|---|---|---|---|---|---|---|
+| 1 | 無非王土 | 王は土に非ざる無し | true | false | false | RULE1 |
+| 2 | 無人不飲 | 人無く飲まず | true | true | true |  |
+| 3 | 学与 | 学び | true | false | false | RULE1 |
+| 3 | 君学与 | 君学び | true | false | false | RULE1 |
+| 4 | 孔子聖人 | 孔子聖人 | true | false | false | RULE1 |
+| 4 | 孔子君子 | 孔子君子 | true | false | false | RULE1 |
+| 5 | 陽貨帰孔子豚 | 陽貨孔子の豚に帰る | true | false | false | DEFAULT1 |
+| 6 | 王命臣行 | 王臣を命じ行く | true | false | false | DEFAULT1 |
+| 7 | 行楽須及春 | 行楽須らく春を及ぶべし | true | false | false | DEFAULT1 |
+| 8 | 随風潜入夜 | 風を随ひ潜かに夜に入る | true | false | false | DEFAULT1 |
+| 9 | 勿施人 | 人を施すこと勿かれ | true | false | false | DEFAULT1 |
+| 10 | 人対客 | 人客を対ふ | true | false | false | DEFAULT1 |
+| 11 | 復照青苔上 | 復た青苔の上を照る | true | false | false | DEFAULT2 |
+| 12 | 散入春風満洛城 | 散春の風に入り洛城を満つ | true | false | false | DEFAULT2 |
+| 13 | 花重錦官城 | 花錦官城を重ぬ | true | false | false | DEFAULT1 |
+| 14 | 遺愛寺鐘欹枕聴 | 遺愛寺鐘枕を欹ち聴く | true | false | false | DEFAULT1 |
+| 15 | 何人不起故園情 | 何人故園の情を起きず | true | false | false | DEFAULT2 |
+| 16 | 彼得名 | 彼は名を得 | true | false | false | DEFAULT1 |
+| 17 | 彼陥敵 | 彼は敵を陥る | true | false | false | DEFAULT1 |
+| 18 | 彼為王 | 彼は王を為す | true | false | false | DEFAULT1 |
+| 19 | 彼賢友 | 彼は友賢し | true | true | true |  |
+| 20 | 不亦大乎 | 亦た大ほからずや | true | true | true |  |
+| 20 | 不大 | 大ほからず | true | true | true |  |
+| 21 | 不尽知 | 尽く知らず | true | true | true |  |
+| 21 | 不甚美 | 甚だ美しからず | true | true | true |  |
+| 22 | 氷莫如水冷 | 氷は水冷たくに如くは莫し | true | true | true |  |
+
+exact:true に戻る 7 行の内訳（どの規則の同一性で区別できないか）：
+- **無人不飲**（人無く飲まず。正は 飲まざる人無し）：使う規則 `seq_neg_clause/neg_clause neg_clause`（2 文）・`neg_clause/NEG_MU verb_phrase`（9 文）・`neg_clause/NEG_BU verb_phrase`（36 文）はどれも正しい文でも使う。誤りは「無 ＋ 人 の次に 不飲 を並べた」という**規則の組み合わせ（親子関係）**にあり、単独の規則の同一性では区別できない。
+- **氷莫如水冷**：`compare_clause/verb_phrase MOKU_NAKU verb_phrase`（2 文）・`sv/NOUN pred_in`（30 文）など。誤りは 比較の対象位置に 主述（sv）が入る組み合わせ。同様に規則単独では区別できない。
+- 彼賢友・不亦大乎・不大・不尽知・不甚美：辞書の誤り（賢・大・尽・甚）。この参考では辞書項目も全部確認済みにしてしまったので exact:true になる（実際には確認しない項目）。
+- 区別できた（exact:false のまま）もの：孔子聖人・孔子君子・無非王土（`verb_phrase/NOUN NOUN` を確認済みにしない限り）、学与・君学与（`shitsumon_clause/verb_phrase YO_NIMO`）、陽貨帰孔子豚（`DEFAULT:cases:帰`）。王命臣行は DEFAULT のみで止まっている。
+
+→ **規則の同一性で区別できないもの**：無人不飲・氷莫如水冷 のように、正しい文と同じ規則を使い、規則の**組み合わせ**だけが誤りのもの。次の段の候補：親子の規則の対（例 `neg_clause/NEG_MU verb_phrase > seq_neg_clause/...`）を項目にする。
+
+### 確認できなかったもの
+- **実際に FUNC・RULE を確認済みにした運用**はまだない（本番の一覧は空）。ダミーでの spec と仮の一覧での再実行のみ。
+- 規則名が付かなかった節点（内側の節点。試作で 71 個）が、将来「使った規則」の漏れにならないか：親の節点に規則名が付くので漏れないはずだが、全文で網羅的に確かめてはいない。
+- 純 Ruby 実装の Racc（C 拡張なし）での包みの動作は未確認。
+- 最終コード（a33e21c）での bench は 1 回のみ：一致率 47/50・完全成功 47/50・解析率 49/50（第2段の前後で変化なし。47 は S9 のプロンプト変更によるもの：上の A）。
+
+### 想定外の発見
+1. 一覧が空でも exact:true になっていた 28 文（第1段）は、第2段で 0 件になった。うち無非王土・孔子聖人・孔子君子 は誤りで、`verb_phrase/NOUN NOUN` を使う。この規則は Yomi 側に「なり」を足す処理がなく、2 文とも誤り。**確認してはいけない規則**。
+2. `FUNC:与` だけでは 学与 の脱落（疑問の与）と 与友飲酒（共同の与）を区別できない。区別は規則 `shitsumon_clause/verb_phrase YO_NIMO`（使う文は 1 つだけ）でできる。
+3. 規則名は右辺の記号列なので、`.y` の規則を書き換えると名前が変わって確認済み印が外れる。これは意図した動作だが、`.y` の整形・並べ替えでは外れない。
+4. 通過だけの規則（`pred_tr/VERB` などの 1 字の葉）も項目として数えている。使用頻度の上位に出る（`pred_tr/VERB` 99 文）ので、確認の最初の一手にはなる反面、情報量は少ない。
