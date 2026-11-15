@@ -18,6 +18,7 @@
 
 require_relative 'tree'
 require_relative 'lexicon'
+require_relative 'rule_trace'
 
 module Kanbun
   module Yomi
@@ -155,6 +156,7 @@ module Kanbun
     def analyze(tree)
       (result, used) = collecting do
         items = collect(tree)
+        note_rules(tree)
         out = Array.new(items.size, '')
         demand = { form: :shushi }
         (items.size - 1).downto(0) do |i|
@@ -165,6 +167,15 @@ module Kanbun
         [out.join, parts]
       end
       Result.new(result[0], ambiguities(tree), result[1], used)
+    end
+
+    # 木を組んだ文法規則を RULE:<規則名> として記録する（規則名は Kanbun::RuleTrace が節点に付けたもの）。
+    def note_rules(node)
+      note("RULE:#{node.rule}") if node.respond_to?(:rule) && node.rule
+      case node
+      when Tree::Seq then node.children.each { |c| note_rules(c) }
+      when Tree::Ret then (node.block + [node.head]).each { |c| note_rules(c) }
+      end
     end
 
     # ブロックの間に引いた辞書項目の ID を集める。[ブロックの値, ID の配列（重複なし）] を返す。

@@ -66,8 +66,8 @@ RSpec.describe "Yomi::Result#used_entries の FUNC" do
   end
 
   it "名詞だけの文は FUNC を持たない（名詞は対象外）" do
-    expect(used("深林")).to eq []
-    expect(used("孔子聖人")).to eq [] # 名詞述語の「なり」は FUNC にならない（RULE で扱う。第2段 S9）
+    expect(used("深林").grep(/\AFUNC:/)).to eq []
+    expect(used("孔子聖人").grep(/\AFUNC:/)).to eq [] # 名詞述語の「なり」は FUNC にならない（RULE:verb_phrase/NOUN NOUN で扱う。第2段 S9）
   end
 
   it "FUNC の項目 ID も重複しない" do

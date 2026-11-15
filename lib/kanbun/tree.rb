@@ -21,6 +21,8 @@ module Kanbun
     # Yomi は ambiguous な木を exact とは名乗らない。返り点には影響しない。
     module Ambiguous
       attr_accessor :ambiguous
+      # この節点を作った文法規則の名前（Kanbun::RuleTrace が付ける。例 verb_phrase/NOUN NOUN）。手で組んだ木では nil。
+      attr_accessor :rule
     end
 
     # 木の中の ambiguous をすべて外す（受身が確定する被の内側など）。
