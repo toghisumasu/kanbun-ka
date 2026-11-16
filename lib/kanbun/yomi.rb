@@ -541,14 +541,15 @@ module Kanbun
       [text + dem[:vpart].to_s, { form: :rentai, vpart: part }]
     end
 
-    # 主題の は：先頭が代名詞、または 比況・比較・受身・非・也 を含む文の先頭名詞
+    # 主題の は：2 語以上の文で、先頭が代名詞、または 比況・比較・受身・非・也 を含む文の先頭名詞
     def add_topic!(items, out)
       first = items.first
       return unless first && Lexicon::TABLE[first.surface] == :NOUN && first.leaf.role.nil?
       return if first.npart || out[0] != first.surface   # 助詞がすでに付いている
 
       nominal = items.any? { |i| %i[hikyo compare ukemi].include?(i.role) || i.surface == '非' }
-      return unless PRONOUNS.include?(first.surface) || (nominal && items.size > 1)
+      return if items.size == 1   # 単独の語には付けない（送り仮名は文意に即して付く。28 文の照合 #6）
+      return unless PRONOUNS.include?(first.surface) || nominal
 
       note('FUNC:主題は')
       out[0] = out[0] + 'は'
